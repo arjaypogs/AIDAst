@@ -302,6 +302,30 @@ def get_tool_definitions() -> List[Tool]:
             }
         ),
 
+        Tool(
+            name="python_exec",
+            description=(
+                "Execute Python code directly in the Exegol container without escaping issues. "
+                "Pass multi-line Python as a plain string — no heredoc, no backslash hell, no quoting errors. "
+                "Use this instead of execute() for any Python script. "
+                "Supports {{PLACEHOLDER}} credential substitution in the code."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "code": {
+                        "type": "string",
+                        "description": "Python code to execute (multi-line supported, no escaping needed)"
+                    },
+                    "phase": {
+                        "type": "string",
+                        "description": "Current phase (for logging)"
+                    }
+                },
+                "required": ["code"]
+            }
+        ),
+
         # ========== Pentesting Tools (5 tools) ==========
         Tool(
             name="scan",

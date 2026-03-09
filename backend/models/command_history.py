@@ -22,6 +22,8 @@ class CommandHistory(Base):
     phase = Column(String(50))  # Which phase was active
     status = Column(String(50), default="completed")  # completed, failed, timeout, running
     timeout_at = Column(TIMESTAMP, nullable=True)  # When timeout occurred
+    command_type = Column(String(20), default='shell')  # 'shell' | 'python'
+    source_code = Column(Text, nullable=True)  # Raw Python code (for python_exec)
 
     created_at = Column(TIMESTAMP, server_default=func.now())
 

@@ -76,6 +76,9 @@ async def handle_tool_call(name: str, arguments: dict, mcp_service) -> List[Text
         elif name == "execute":
             return await _handle_execute(arguments, mcp_service)
 
+        elif name == "python_exec":
+            return await _handle_python_exec(arguments, mcp_service)
+
         # ========== Pentesting Tools ==========
 
         elif name == "scan":
@@ -886,6 +889,176 @@ async def _handle_execute(arguments: dict, mcp_service) -> List[TextContent]:
 
     return [TextContent(type="text", text=response_text)]
 
+
+# ========== Python Exec Handler ==========
+
+async def _handle_python_exec(arguments: dict, mcp_service) -> List[TextContent]:
+    """Handle python_exec — execute Python via stdin, same approval flow as execute."""
+    code = arguments.get("code", "")
+    phase = arguments.get("phase")
+
+    if not mcp_service.current_assessment_id:
+        return [TextContent(
+            type="text",
+            text="No assessment loaded. Use 'load_assessment' first."
+        )]
+
+    if not code.strip():
+        return [TextContent(type="text", text="No code provided.")]
+
+    # ========== CHECK COMMAND EXECUTION MODE ==========
+    try:
+        mode_response = await mcp_service.http_client.get(
+            f"{mcp_service.backend_url}/command-settings"
+        )
+        mode_response.raise_for_status()
+        cmd_settings = mode_response.json()
+        execution_mode = cmd_settings.get("execution_mode", "open")
+        filter_keywords = cmd_settings.get("filter_keywords", [])
+    except Exception:
+        execution_mode = "open"
+        filter_keywords = []
+
+    # ========== DETERMINE IF APPROVAL REQUIRED ==========
+    requires_approval = False
+    matched_keywords = []
+
+    if execution_mode == "closed":
+        requires_approval = True
+    elif execution_mode == "filter":
+        # Keyword check runs on the Python code content
+        code_lower = code.lower()
+        matched_keywords = [kw for kw in filter_keywords if kw.lower() in code_lower]
+        if matched_keywords:
+            requires_approval = True
+
+    # ========== APPROVAL FLOW ==========
+    if requires_approval:
+        import asyncio
+
+        timeout_seconds = 300
+        try:
+            timeout_response = await mcp_service.http_client.get(
+                f"{mcp_service.backend_url}/command-settings"
+            )
+            if timeout_response.status_code == 200:
+                timeout_seconds = timeout_response.json().get("timeout_seconds", 300)
+        except Exception:
+            pass
+
+        poll_interval = 2
+        pending_id = None
+
+        try:
+            pending_response = await mcp_service.http_client.post(
+                f"{mcp_service.backend_url}/pending-commands/create",
+                json={
+                    "assessment_id": mcp_service.current_assessment_id,
+                    "command": code,           # Store full Python code as command
+                    "command_type": "python",  # Mark as python for approve routing
+                    "phase": phase,
+                    "matched_keywords": matched_keywords
+                }
+            )
+            pending_response.raise_for_status()
+            pending_cmd = pending_response.json()
+            pending_id = pending_cmd.get("id")
+        except Exception as e:
+            return [TextContent(
+                type="text",
+                text=f"**❌ python_exec blocked — failed to create approval request**\n\n**Error:** {str(e)}\n\nCode was NOT executed."
+            )]
+
+        if not pending_id:
+            return [TextContent(
+                type="text",
+                text="**❌ python_exec blocked — invalid approval request**\n\nCode was NOT executed."
+            )]
+
+        # Poll for approval
+        elapsed = 0
+        final_status = "timeout"
+        execution_result = None
+
+        while elapsed < timeout_seconds:
+            await asyncio.sleep(poll_interval)
+            elapsed += poll_interval
+            try:
+                status_response = await mcp_service.http_client.get(
+                    f"{mcp_service.backend_url}/pending-commands/{pending_id}"
+                )
+                if status_response.status_code == 200:
+                    pending_data = status_response.json()
+                    current_status = pending_data.get("status", "pending")
+                    if current_status == "executed":
+                        final_status = "approved"
+                        execution_result = pending_data.get("execution_result", {})
+                        break
+                    elif current_status in ("rejected", "timeout"):
+                        final_status = current_status
+                        break
+            except Exception:
+                pass
+
+        if final_status == "approved" and execution_result:
+            max_length = await mcp_service.get_output_max_length()
+            stdout = execution_result.get("stdout", "")
+            stderr = execution_result.get("stderr", "")
+            success = execution_result.get("success", False)
+            if success:
+                return [TextContent(type="text", text=f"```\n{stdout[:max_length]}\n```\n" if stdout else "*(No output)*\n")]
+            else:
+                response_text = f"Python failed (exit code {execution_result.get('returncode', 'unknown')})\n"
+                if stderr:
+                    response_text += f"```\n{stderr[:500]}\n```\n"
+                return [TextContent(type="text", text=response_text)]
+        elif final_status == "rejected":
+            return [TextContent(type="text", text="python_exec rejected by user.")]
+        else:
+            return [TextContent(type="text", text=f"python_exec approval timed out after {timeout_seconds}s. Code was NOT executed.")]
+
+    # ========== EXECUTE IMMEDIATELY (OPEN MODE) ==========
+    try:
+        response = await mcp_service.http_client.post(
+            f"{mcp_service.backend_url}/assessments/{mcp_service.current_assessment_id}/commands/python-exec",
+            json={"code": code, "phase": phase}
+        )
+        response.raise_for_status()
+        result = response.json()
+    except Exception as e:
+        error_msg = str(e)
+        if "404" in error_msg and "Placeholder" in error_msg:
+            return [TextContent(
+                type="text",
+                text=f"ERROR: {error_msg}\n\nUse `credentials_list` to see available placeholders, or `credentials_add` to add it."
+            )]
+        return [TextContent(type="text", text=f"ERROR executing Python: {error_msg}")]
+
+    if result.get("status") == "timeout":
+        timeout_val = result.get("execution_time", 300)
+        return [TextContent(
+            type="text",
+            text=f"**Timeout ({timeout_val}s exceeded)**\n\nPlease run the Python code manually and paste the results here.\nI'm pausing until you provide the output.\n"
+        )]
+
+    max_length = await mcp_service.get_output_max_length()
+
+    if result.get("success"):
+        stdout = result.get("stdout") or ""
+        response_text = f"```\n{stdout[:max_length]}\n```\n" if stdout else "*(Python completed with no output)*\n"
+    else:
+        stdout = result.get("stdout") or ""
+        stderr = result.get("stderr") or ""
+        if stdout:
+            response_text = f"**Python output (exit code {result.get('returncode', 'unknown')}):**\n\n```\n{stdout[:max_length]}\n```\n"
+            if stderr:
+                response_text += f"\n**Stderr:**\n```\n{stderr[:500]}\n```\n"
+        elif stderr:
+            response_text = f"**Python error:**\n```\n{stderr[:500]}\n```\n"
+        else:
+            response_text = f"ERROR: Python failed with exit code {result.get('returncode', 'unknown')}\n"
+
+    return [TextContent(type="text", text=response_text)]
 
 
 # ========== Pentesting Tools Handlers ==========

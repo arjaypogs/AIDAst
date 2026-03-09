@@ -11,11 +11,54 @@ from sqlalchemy import select, or_
 
 from database import get_db, get_async_db
 from models import CommandHistory, Assessment, Credential
-from schemas.command import CommandExecute, CommandResponse, CommandsPaginatedResponse, CommandWithAssessmentResponse
+from schemas.command import CommandExecute, PythonExecRequest, CommandResponse, CommandsPaginatedResponse, CommandWithAssessmentResponse
 from services.container_service import ContainerService
 
 # Router for assessment-specific commands
 router = APIRouter(prefix="/assessments/{assessment_id}/commands", tags=["commands"])
+
+
+async def _substitute_credentials(text: str, assessment_id: int, db: AsyncSession) -> str:
+    """Replace {{PLACEHOLDER}} tokens in text with actual credential values.
+
+    Reused by both execute-with-credentials and python-exec endpoints.
+    Raises HTTP 404 if a placeholder is not found in credentials.
+    """
+    placeholders = re.findall(r'\{\{([A-Z0-9_]+)\}\}', text)
+    if not placeholders:
+        return text
+
+    stmt = select(Credential).filter(Credential.assessment_id == assessment_id)
+    result = await db.execute(stmt)
+    credentials = result.scalars().all()
+    creds_map = {cred.placeholder.strip("{}"): cred for cred in credentials}
+
+    for placeholder in placeholders:
+        if placeholder in creds_map:
+            cred = creds_map[placeholder]
+            if cred.credential_type == "bearer_token":
+                replacement = cred.token
+            elif cred.credential_type == "api_key":
+                replacement = cred.token
+            elif cred.credential_type == "cookie":
+                replacement = cred.cookie_value
+            elif cred.credential_type == "basic_auth":
+                auth_str = f"{cred.username}:{cred.password}"
+                replacement = base64.b64encode(auth_str.encode()).decode()
+            elif cred.credential_type == "ssh":
+                replacement = f"{cred.username}:{cred.password}"
+            elif cred.credential_type == "custom":
+                replacement = cred.token or str(cred.custom_data or "")
+            else:
+                replacement = ""
+            text = text.replace(f"{{{{{placeholder}}}}}", replacement)
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Placeholder '{{{{{placeholder}}}}}' not found in credentials"
+            )
+
+    return text
 
 # Router for global commands view
 global_router = APIRouter(prefix="/commands", tags=["global-commands"])
@@ -116,63 +159,52 @@ async def execute_command_with_credentials(
             detail=f"Assessment with id {assessment_id} not found"
         )
 
-    command = command_data.command
-    original_command = command
-
-    # ========== CREDENTIAL SUBSTITUTION ==========
-    # Find placeholders like {{PLACEHOLDER_NAME}}
-    placeholders = re.findall(r'\{\{([A-Z0-9_]+)\}\}', command)
-
-    if placeholders:
-        # Fetch all credentials for this assessment
-        stmt = select(Credential).filter(Credential.assessment_id == assessment_id)
-        result = await db.execute(stmt)
-        credentials = result.scalars().all()
-
-        # Create placeholder -> credential mapping
-        creds_map = {cred.placeholder.strip("{}"): cred for cred in credentials}
-
-        # Replace each placeholder
-        for placeholder in placeholders:
-            if placeholder in creds_map:
-                cred = creds_map[placeholder]
-
-                # Determine replacement value based on credential type
-                if cred.credential_type == "bearer_token":
-                    replacement = cred.token
-                elif cred.credential_type == "api_key":
-                    replacement = cred.token
-                elif cred.credential_type == "cookie":
-                    replacement = cred.cookie_value
-                elif cred.credential_type == "basic_auth":
-                    # Encode as base64 for Basic Auth
-                    auth_str = f"{cred.username}:{cred.password}"
-                    b64 = base64.b64encode(auth_str.encode()).decode()
-                    replacement = b64
-                elif cred.credential_type == "ssh":
-                    # For SSH, use username:password format
-                    replacement = f"{cred.username}:{cred.password}"
-                elif cred.credential_type == "custom":
-                    # For custom, use first available field
-                    replacement = cred.token or str(cred.custom_data or "")
-                else:
-                    replacement = ""
-
-                # Perform replacement
-                command = command.replace(f"{{{{{placeholder}}}}}", replacement)
-            else:
-                # Placeholder not found
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"Placeholder '{{{{{placeholder}}}}}' not found in credentials"
-                )
+    # Apply credential substitution via shared helper
+    command = await _substitute_credentials(command_data.command, assessment_id, db)
 
     # Execute command via Exegol service
     container_service = ContainerService()
     result = await container_service.execute_and_log_command(
         assessment_id=assessment_id,
-        command=command,  # Command with substitutions
+        command=command,
         phase=command_data.phase,
+        db=db
+    )
+
+    return result
+
+
+@router.post("/python-exec", response_model=CommandResponse)
+async def execute_python(
+    assessment_id: int,
+    payload: PythonExecRequest,
+    db: AsyncSession = Depends(get_async_db)
+):
+    """Execute Python code in Exegol via stdin (no heredoc escaping needed).
+
+    Supports {{PLACEHOLDER}} credential substitution in the code.
+    The code is piped directly to `python3 -` via docker exec stdin.
+    """
+    # Verify assessment exists
+    stmt = select(Assessment).filter(Assessment.id == assessment_id)
+    result = await db.execute(stmt)
+    assessment = result.scalar_one_or_none()
+
+    if not assessment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Assessment with id {assessment_id} not found"
+        )
+
+    # Apply credential substitution to the code (same {{PLACEHOLDER}} syntax)
+    code = await _substitute_credentials(payload.code, assessment_id, db)
+
+    # Execute via stdin — zero escaping
+    container_service = ContainerService()
+    result = await container_service.execute_and_log_python(
+        assessment_id=assessment_id,
+        code=code,
+        phase=payload.phase,
         db=db
     )
 
@@ -240,6 +272,8 @@ async def list_all_commands(
             success=cmd.success,
             phase=cmd.phase,
             status=cmd.status,
+            command_type=cmd.command_type or 'shell',
+            source_code=cmd.source_code,
             created_at=cmd.created_at,
             assessment_name=cmd.assessment.name if cmd.assessment else "Unknown"
         )

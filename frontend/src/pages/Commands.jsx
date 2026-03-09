@@ -462,9 +462,18 @@ const Commands = () => {
                       <tr className="cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800/50" onClick={() => setExpandedCommand(expandedCommand === cmd.id ? null : cmd.id)}>
                         <td><div className={`w-2 h-2 rounded-full ${getStatusDot(null, cmd.success)}`} /></td>
                         <td>
-                          <code className="text-xs font-mono text-neutral-700 dark:text-neutral-300">
-                            {cmd.command.length > 60 ? cmd.command.substring(0, 60) + '...' : cmd.command}
-                          </code>
+                          {cmd.command_type === 'python' ? (
+                            <span className="inline-flex items-center gap-1.5">
+                              <span className="px-1.5 py-0.5 text-xs font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded font-mono">🐍 python</span>
+                              <code className="text-xs font-mono text-neutral-500 dark:text-neutral-400">
+                                {(cmd.source_code?.split('\n').find(l => l.trim()) || 'python script').slice(0, 50)}…
+                              </code>
+                            </span>
+                          ) : (
+                            <code className="text-xs font-mono text-neutral-700 dark:text-neutral-300">
+                              {cmd.command.length > 60 ? cmd.command.substring(0, 60) + '...' : cmd.command}
+                            </code>
+                          )}
                         </td>
                         <td className="text-sm text-neutral-600 dark:text-neutral-400">{cmd.assessment_name}</td>
                         <td className="text-xs text-neutral-500">{cmd.execution_time?.toFixed(2)}s</td>
@@ -476,8 +485,17 @@ const Commands = () => {
                           <td colSpan="6" className="p-4 bg-neutral-50 dark:bg-neutral-800/50">
                             <div className="space-y-3">
                               <div>
-                                <span className="text-xs font-medium text-neutral-500 uppercase">Command</span>
-                                <code className="block mt-1 p-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded text-xs font-mono">{cmd.command}</code>
+                                <span className="text-xs font-medium text-neutral-500 uppercase flex items-center gap-1.5">
+                                  {cmd.command_type === 'python' && (
+                                    <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded font-mono">🐍 python_exec</span>
+                                  )}
+                                  {cmd.command_type !== 'python' && 'Command'}
+                                </span>
+                                {cmd.command_type === 'python' ? (
+                                  <pre className="block mt-1 p-2 bg-neutral-900 text-emerald-300 border border-neutral-700 rounded text-xs font-mono overflow-auto max-h-48 whitespace-pre-wrap">{cmd.source_code}</pre>
+                                ) : (
+                                  <code className="block mt-1 p-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded text-xs font-mono">{cmd.command}</code>
+                                )}
                               </div>
                               {cmd.stdout && (
                                 <div>

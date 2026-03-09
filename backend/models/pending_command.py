@@ -14,6 +14,7 @@ class PendingCommand(Base):
     assessment_id = Column(Integer, ForeignKey("assessments.id", ondelete="CASCADE"), nullable=False, index=True)
     command = Column(Text, nullable=False)
     phase = Column(String(50))
+    command_type = Column(String(20), default='shell')  # 'shell' | 'python'
     matched_keywords = Column(JSON, default=[])  # Keywords that triggered the filter
     status = Column(String(20), default="pending", index=True)  # pending, approved, rejected, executed, timeout
     

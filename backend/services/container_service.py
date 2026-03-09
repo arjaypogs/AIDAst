@@ -476,6 +476,251 @@ class ContainerService:
 
             return command_log
 
+    async def execute_python_stdin(
+        self,
+        code: str,
+        working_directory: Optional[str] = None,
+        timeout: float = 300.0
+    ) -> Dict[str, Any]:
+        """Execute Python code via stdin to avoid heredoc escaping issues.
+
+        Uses `docker exec -i python3 -` and pipes the code directly via stdin.
+        No temp files, no shell escaping required.
+
+        Args:
+            code: Python source code to execute
+            working_directory: Optional working directory inside the container
+            timeout: Execution timeout in seconds
+
+        Returns:
+            Dict with success, stdout, stderr, returncode, execution_time, container
+        """
+        if not self.current_container:
+            return {
+                "success": False,
+                "error": "No container selected",
+                "stdout": "",
+                "stderr": "No container selected",
+                "returncode": -1,
+                "execution_time": 0,
+            }
+
+        start_time = time.time()
+
+        docker_cmd = ["docker", "exec", "-i"]
+        if working_directory:
+            docker_cmd += ["-w", working_directory]
+        docker_cmd += [
+            "-e", "PYTHONUNBUFFERED=1",
+            self.current_container,
+            "python3", "-"
+        ]
+
+        try:
+            process = await asyncio.create_subprocess_exec(
+                *docker_cmd,
+                stdin=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+
+            stdout_bytes, stderr_bytes = await asyncio.wait_for(
+                process.communicate(input=code.encode('utf-8')),
+                timeout=timeout
+            )
+
+            execution_time = time.time() - start_time
+
+            return {
+                "success": process.returncode == 0,
+                "stdout": self._sanitize_output(stdout_bytes.decode('utf-8', errors='replace')),
+                "stderr": self._sanitize_output(stderr_bytes.decode('utf-8', errors='replace')),
+                "returncode": process.returncode,
+                "execution_time": execution_time,
+                "container": self.current_container,
+            }
+
+        except asyncio.TimeoutError:
+            try:
+                process.kill()
+                await process.communicate()
+            except Exception:
+                pass
+            return {
+                "success": False,
+                "stdout": "",
+                "stderr": f"Python execution timed out after {timeout}s",
+                "returncode": -1,
+                "execution_time": timeout,
+                "container": self.current_container,
+            }
+
+        except Exception as e:
+            return {
+                "success": False,
+                "stdout": "",
+                "stderr": str(e),
+                "returncode": -1,
+                "execution_time": time.time() - start_time,
+                "container": self.current_container,
+            }
+
+    async def execute_and_log_python(
+        self,
+        assessment_id: int,
+        code: str,
+        phase: Optional[str],
+        db: AsyncSession,
+        timeout: Optional[int] = None
+    ) -> "CommandHistory":
+        """Execute Python code via stdin and log it to the database.
+
+        Mirrors execute_and_log_command() but uses execute_python_stdin() and
+        stores command_type='python' + source_code=code in CommandHistory.
+
+        Args:
+            assessment_id: Assessment to associate the command with
+            code: Python source code to execute
+            phase: Current assessment phase (for logging)
+            db: Async database session
+            timeout: Optional execution timeout override
+
+        Returns:
+            CommandHistory instance with execution results
+        """
+        # --- Resolve timeout from DB settings ---
+        if timeout is None:
+            stmt = select(PlatformSettings).filter(
+                PlatformSettings.key == "command_timeout"
+            )
+            result = await db.execute(stmt)
+            timeout_setting = result.scalar_one_or_none()
+            try:
+                timeout = int(timeout_setting.value) if timeout_setting else settings.COMMAND_TIMEOUT
+            except ValueError:
+                timeout = settings.COMMAND_TIMEOUT
+
+        # --- Resolve container from DB settings ---
+        stmt = select(PlatformSettings).filter(PlatformSettings.key == "container_name")
+        result = await db.execute(stmt)
+        container_setting = result.scalar_one_or_none()
+        self.current_container = (
+            container_setting.value if (container_setting and container_setting.value)
+            else settings.DEFAULT_CONTAINER_NAME
+        )
+
+        # --- Resolve workspace path from assessment ---
+        stmt = select(Assessment).filter(Assessment.id == assessment_id)
+        result = await db.execute(stmt)
+        assessment = result.scalar_one_or_none()
+
+        working_directory = None
+        if assessment:
+            if not assessment.workspace_path:
+                workspace_result = await self.create_workspace(
+                    assessment_name=assessment.name,
+                    db=None
+                )
+                stmt = (
+                    update(Assessment)
+                    .where(Assessment.id == assessment_id)
+                    .values(
+                        workspace_path=workspace_result["workspace_path"],
+                        container_name=workspace_result["container_name"]
+                    )
+                )
+                await db.execute(stmt)
+                await db.commit()
+                await db.refresh(assessment)
+                assessment.workspace_path = workspace_result["workspace_path"]
+            else:
+                workspace_check = await self._run_command([
+                    "docker", "exec", self.current_container, "test", "-d", assessment.workspace_path
+                ])
+                if workspace_check["returncode"] != 0:
+                    subdirs = ['recon', 'exploits', 'loot', 'notes', 'scripts', 'context']
+                    subdir_paths = [f"{assessment.workspace_path}/{subdir}" for subdir in subdirs]
+                    all_paths = [assessment.workspace_path] + subdir_paths
+                    mkdir_command = f"mkdir -p {' '.join(shlex.quote(p) for p in all_paths)}"
+                    await self._run_command([
+                        "docker", "exec", self.current_container, "bash", "-c", mkdir_command
+                    ])
+
+            working_directory = assessment.workspace_path
+
+        # --- Create log entry (status: running) ---
+        command_log = CommandHistory(
+            assessment_id=assessment_id,
+            container_name=self.current_container,
+            command="python3 -",
+            phase=phase,
+            status="running",
+            command_type="python",
+            source_code=code,
+        )
+        db.add(command_log)
+        await db.commit()
+        await db.refresh(command_log)
+
+        try:
+            result = await asyncio.wait_for(
+                self.execute_python_stdin(
+                    code=code,
+                    working_directory=working_directory,
+                    timeout=timeout
+                ),
+                timeout=timeout + 5  # small buffer around inner timeout
+            )
+
+            command_log.stdout = self._sanitize_output(result.get("stdout") or "")
+            command_log.stderr = self._sanitize_output(result.get("stderr") or "")
+            command_log.returncode = result.get("returncode")
+            command_log.execution_time = result.get("execution_time")
+            command_log.success = result.get("success")
+            command_log.status = "completed" if result.get("success") else "failed"
+
+            await db.commit()
+            await db.refresh(command_log)
+
+            # WebSocket broadcast
+            from schemas.command import CommandResponse
+            command_dict = CommandResponse.model_validate(command_log).model_dump(mode='json')
+            if command_log.success:
+                await manager.broadcast(
+                    event_command_completed(assessment_id, command_dict),
+                    assessment_id=assessment_id
+                )
+            else:
+                await manager.broadcast(
+                    event_command_failed(assessment_id, command_dict),
+                    assessment_id=assessment_id
+                )
+
+            return command_log
+
+        except asyncio.TimeoutError:
+            command_log.status = "timeout"
+            command_log.timeout_at = datetime.utcnow()
+            command_log.stderr = f"Python execution exceeded {timeout}s timeout limit"
+            command_log.success = False
+            command_log.execution_time = timeout
+
+            await db.commit()
+            await db.refresh(command_log)
+
+            from schemas.command import CommandResponse
+            command_dict = CommandResponse.model_validate(command_log).model_dump(mode='json')
+            await manager.broadcast(
+                create_event(
+                    EventType.COMMAND_TIMEOUT,
+                    {"command": command_dict},
+                    assessment_id=assessment_id
+                ),
+                assessment_id=assessment_id
+            )
+
+            return command_log
+
     async def create_workspace(self, assessment_name: str, db: Session = None) -> Dict[str, str]:
         """Create workspace folder in pentesting container with subdirectories
 

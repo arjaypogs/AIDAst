@@ -102,10 +102,25 @@ const PendingCommandModal = ({ pendingCommand, onClose, onApprove, onReject }) =
           {/* Command Details */}
           <div className="space-y-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-neutral-300 mb-1">Command</label>
-              <div className="bg-gray-900 dark:bg-black text-gray-100 dark:text-neutral-200 p-4 rounded-lg font-mono text-sm overflow-x-auto">
-                {pendingCommand.command}
-              </div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-neutral-300 mb-1 flex items-center gap-2">
+                {pendingCommand.command_type === 'python' ? (
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="px-1.5 py-0.5 text-xs font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded font-mono">🐍 python_exec</span>
+                    <span className="text-gray-500 dark:text-neutral-400 font-normal text-xs">code to execute</span>
+                  </span>
+                ) : (
+                  'Command'
+                )}
+              </label>
+              {pendingCommand.command_type === 'python' ? (
+                <pre className="bg-gray-900 dark:bg-black text-emerald-300 p-4 rounded-lg font-mono text-sm overflow-auto max-h-64 whitespace-pre-wrap">
+                  {pendingCommand.command}
+                </pre>
+              ) : (
+                <div className="bg-gray-900 dark:bg-black text-gray-100 dark:text-neutral-200 p-4 rounded-lg font-mono text-sm overflow-x-auto">
+                  {pendingCommand.command}
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">

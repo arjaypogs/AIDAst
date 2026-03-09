@@ -352,14 +352,22 @@ async def approve_command(
             detail=f"Command is already {pending_cmd.status}"
         )
     
-    # Execute the command
+    # Execute the command — route based on command_type
     container_service = ContainerService()
-    exec_result = await container_service.execute_and_log_command(
-        assessment_id=pending_cmd.assessment_id,
-        command=pending_cmd.command,
-        phase=pending_cmd.phase,
-        db=db
-    )
+    if pending_cmd.command_type == "python":
+        exec_result = await container_service.execute_and_log_python(
+            assessment_id=pending_cmd.assessment_id,
+            code=pending_cmd.command,
+            phase=pending_cmd.phase,
+            db=db
+        )
+    else:
+        exec_result = await container_service.execute_and_log_command(
+            assessment_id=pending_cmd.assessment_id,
+            command=pending_cmd.command,
+            phase=pending_cmd.phase,
+            db=db
+        )
     
     # Update pending command
     pending_cmd.status = "executed"
@@ -534,7 +542,8 @@ async def create_pending_command(
         phase=command_data.get("phase"),
         matched_keywords=command_data.get("matched_keywords", []),
         status="pending",
-        timeout_seconds=timeout_sec
+        timeout_seconds=timeout_sec,
+        command_type=command_data.get("command_type", "shell")  # 'shell' | 'python'
     )
     
     db.add(pending_cmd)

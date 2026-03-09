@@ -12,6 +12,12 @@ class CommandExecute(BaseModel):
     phase: Optional[str] = None
 
 
+class PythonExecRequest(BaseModel):
+    """Schema for executing Python code via stdin (no escaping needed)"""
+    code: str
+    phase: Optional[str] = None
+
+
 class CommandResponse(BaseModel):
     """Schema for command response"""
     id: int
@@ -25,6 +31,8 @@ class CommandResponse(BaseModel):
     success: Optional[bool]
     phase: Optional[str]
     status: Optional[str]  # completed, failed, timeout, running
+    command_type: Optional[str] = 'shell'  # 'shell' | 'python'
+    source_code: Optional[str] = None      # Raw Python code (for python_exec)
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

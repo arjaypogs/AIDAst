@@ -135,9 +135,18 @@ const CommandHistory = ({ commands }) => {
 
                 {/* Command */}
                 <div className="flex-1 min-w-0">
-                  <code className="text-xs font-mono text-gray-900 dark:text-neutral-100 break-all">
-                    {cmd.command}
-                  </code>
+                  {cmd.command_type === 'python' ? (
+                    <span className="inline-flex items-center gap-1.5 min-w-0">
+                      <span className="flex-shrink-0 px-1.5 py-0.5 text-xs font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded font-mono">🐍 python</span>
+                      <code className="text-xs font-mono text-gray-500 dark:text-neutral-400 truncate">
+                        {(cmd.source_code?.split('\n').find(l => l.trim()) || 'python script').slice(0, 60)}
+                      </code>
+                    </span>
+                  ) : (
+                    <code className="text-xs font-mono text-gray-900 dark:text-neutral-100 break-all">
+                      {cmd.command}
+                    </code>
+                  )}
                 </div>
 
                 {/* Metadata Compact */}
@@ -190,6 +199,27 @@ const CommandHistory = ({ commands }) => {
               {isExpanded && (
                 <div className="px-3 pb-3 border-t border-gray-100 dark:border-neutral-800 bg-gray-50/30 dark:bg-neutral-900/30">
                   <div className="pt-2 space-y-2">
+                    {/* Python source code block */}
+                    {cmd.command_type === 'python' && cmd.source_code && (
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <h4 className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
+                            🐍 Python Code
+                          </h4>
+                          <button
+                            onClick={() => copyToClipboard(cmd.source_code)}
+                            className="flex items-center gap-1 text-xs text-gray-500 dark:text-neutral-400 hover:text-gray-700 dark:hover:text-neutral-200 px-1.5 py-0.5 rounded hover:bg-gray-200 dark:hover:bg-neutral-800 transition-colors"
+                          >
+                            <Copy className="w-3 h-3" />
+                            Copy
+                          </button>
+                        </div>
+                        <pre className="bg-gray-900 dark:bg-black text-emerald-300 p-2 rounded font-mono text-xs max-h-48 overflow-auto whitespace-pre-wrap">
+                          {cmd.source_code}
+                        </pre>
+                      </div>
+                    )}
+
                     {/* Output Compact */}
                     {cmd.stdout && (
                       <div>
