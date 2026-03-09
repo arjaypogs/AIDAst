@@ -137,7 +137,7 @@ const CommandHistory = ({ commands }) => {
                 <div className="flex-1 min-w-0">
                   {cmd.command_type === 'python' ? (
                     <span className="inline-flex items-center gap-1.5 min-w-0">
-                      <span className="flex-shrink-0 px-1.5 py-0.5 text-xs font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded font-mono">🐍 python</span>
+                      <span className="flex-shrink-0 px-1.5 py-0.5 text-xs font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded font-mono">python</span>
                       <code className="text-xs font-mono text-gray-500 dark:text-neutral-400 truncate">
                         {(cmd.source_code?.split('\n').find(l => l.trim()) || 'python script').slice(0, 60)}
                       </code>
@@ -204,7 +204,7 @@ const CommandHistory = ({ commands }) => {
                       <div>
                         <div className="flex items-center justify-between mb-1">
                           <h4 className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
-                            🐍 Python Code
+                            Python Code
                           </h4>
                           <button
                             onClick={() => copyToClipboard(cmd.source_code)}

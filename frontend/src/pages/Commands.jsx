@@ -464,7 +464,7 @@ const Commands = () => {
                         <td>
                           {cmd.command_type === 'python' ? (
                             <span className="inline-flex items-center gap-1.5">
-                              <span className="px-1.5 py-0.5 text-xs font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded font-mono">🐍 python</span>
+                              <span className="px-1.5 py-0.5 text-xs font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded font-mono">python</span>
                               <code className="text-xs font-mono text-neutral-500 dark:text-neutral-400">
                                 {(cmd.source_code?.split('\n').find(l => l.trim()) || 'python script').slice(0, 50)}…
                               </code>
@@ -487,7 +487,7 @@ const Commands = () => {
                               <div>
                                 <span className="text-xs font-medium text-neutral-500 uppercase flex items-center gap-1.5">
                                   {cmd.command_type === 'python' && (
-                                    <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded font-mono">🐍 python_exec</span>
+                                    <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded font-mono">python</span>
                                   )}
                                   {cmd.command_type !== 'python' && 'Command'}
                                 </span>
