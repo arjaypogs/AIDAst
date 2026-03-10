@@ -1004,7 +1004,7 @@ async def _handle_python_exec(arguments: dict, mcp_service) -> List[TextContent]
                 pass
 
         if final_status == "approved" and execution_result:
-            max_length = await mcp_service.get_output_max_length()
+            max_length = await mcp_service.get_python_exec_output_max_length()
             stdout = execution_result.get("stdout", "")
             stderr = execution_result.get("stderr", "")
             success = execution_result.get("success", False)
@@ -1044,7 +1044,7 @@ async def _handle_python_exec(arguments: dict, mcp_service) -> List[TextContent]
             text=f"**Timeout ({timeout_val}s exceeded)**\n\nPlease run the Python code manually and paste the results here.\nI'm pausing until you provide the output.\n"
         )]
 
-    max_length = await mcp_service.get_output_max_length()
+    max_length = await mcp_service.get_python_exec_output_max_length()
 
     if result.get("success"):
         stdout = result.get("stdout") or ""
@@ -1197,7 +1197,7 @@ async def _handle_http_request(arguments: dict, mcp_service) -> List[TextContent
                 pass
 
         if final_status == "approved" and execution_result:
-            max_length = await mcp_service.get_output_max_length()
+            max_length = await mcp_service.get_http_request_output_max_length()
             stdout = execution_result.get("stdout", "")
             stderr = execution_result.get("stderr", "")
             success = execution_result.get("success", False)
@@ -1237,7 +1237,7 @@ async def _handle_http_request(arguments: dict, mcp_service) -> List[TextContent
             text=f"**Timeout ({timeout_val}s exceeded)**\n\nThe HTTP request timed out. Check target availability.\n"
         )]
 
-    max_length = await mcp_service.get_output_max_length()
+    max_length = await mcp_service.get_http_request_output_max_length()
 
     if result.get("success"):
         stdout = result.get("stdout") or ""

@@ -151,6 +151,18 @@ async def get_platform_setting(key: str, db: Session = Depends(get_db)):
                 value="5000",
                 description="Maximum length of command output before truncation (-1 for unlimited)"
             )
+        if key == "python_exec_output_max_length":
+            return PlatformSettingResponse(
+                key=key,
+                value="5000",
+                description="Maximum length of python_exec output before truncation (-1 for unlimited)"
+            )
+        if key == "http_request_output_max_length":
+            return PlatformSettingResponse(
+                key=key,
+                value="5000",
+                description="Maximum length of http_request output before truncation (-1 for unlimited)"
+            )
         if key == "command_history_limit":
             return PlatformSettingResponse(
                 key=key,
@@ -199,8 +211,8 @@ async def update_platform_setting(
         except ValueError:
             raise fastapi.HTTPException(status_code=400, detail="Timeout value must be a valid integer")
 
-    # Validate output_max_length if updating output_max_length
-    if key == "output_max_length":
+    # Validate output_max_length variants
+    if key in ("output_max_length", "python_exec_output_max_length", "http_request_output_max_length"):
         try:
             max_length = int(request.value)
             if max_length != -1 and (max_length < 500 or max_length > 100000):

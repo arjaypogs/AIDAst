@@ -50,6 +50,14 @@ class AidaMCPService:
         self.output_max_length_cache_time: float = 0
         self.output_max_length_cache_ttl: int = 60  # Cache for 60 seconds
 
+        self.python_exec_output_max_length: int = 5000
+        self.python_exec_output_max_length_cache_time: float = 0
+        self.python_exec_output_max_length_cache_ttl: int = 60
+
+        self.http_request_output_max_length: int = 5000
+        self.http_request_output_max_length_cache_time: float = 0
+        self.http_request_output_max_length_cache_ttl: int = 60
+
         # Command history settings
         self.command_history_limit: int = 10  # Default value
         self.command_history_limit_cache_time: float = 0
@@ -407,6 +415,46 @@ class AidaMCPService:
             file_log.warning(f"Error fetching output_max_length setting: {e}, using default: {self.output_max_length}")
 
         return self.output_max_length
+
+    async def get_python_exec_output_max_length(self) -> int:
+        """Get python_exec_output_max_length setting from backend (with cache)"""
+        current_time = time.time()
+
+        if (current_time - self.python_exec_output_max_length_cache_time) < self.python_exec_output_max_length_cache_ttl:
+            return self.python_exec_output_max_length
+
+        try:
+            response = await self.http_client.get(f"{self.backend_url}/system/settings/python_exec_output_max_length")
+            if response.status_code == 200:
+                data = response.json()
+                self.python_exec_output_max_length = int(data["value"])
+                self.python_exec_output_max_length_cache_time = current_time
+            else:
+                file_log.warning(f"Failed to load python_exec_output_max_length setting, using default: {self.python_exec_output_max_length}")
+        except Exception as e:
+            file_log.warning(f"Error fetching python_exec_output_max_length setting: {e}, using default: {self.python_exec_output_max_length}")
+
+        return self.python_exec_output_max_length
+
+    async def get_http_request_output_max_length(self) -> int:
+        """Get http_request_output_max_length setting from backend (with cache)"""
+        current_time = time.time()
+
+        if (current_time - self.http_request_output_max_length_cache_time) < self.http_request_output_max_length_cache_ttl:
+            return self.http_request_output_max_length
+
+        try:
+            response = await self.http_client.get(f"{self.backend_url}/system/settings/http_request_output_max_length")
+            if response.status_code == 200:
+                data = response.json()
+                self.http_request_output_max_length = int(data["value"])
+                self.http_request_output_max_length_cache_time = current_time
+            else:
+                file_log.warning(f"Failed to load http_request_output_max_length setting, using default: {self.http_request_output_max_length}")
+        except Exception as e:
+            file_log.warning(f"Error fetching http_request_output_max_length setting: {e}, using default: {self.http_request_output_max_length}")
+
+        return self.http_request_output_max_length
 
     async def get_command_history_limit(self) -> int:
         """Get command_history_limit setting from backend (with cache)"""

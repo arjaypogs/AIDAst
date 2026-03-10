@@ -49,6 +49,14 @@ const Settings = () => {
   const [originalOutputMaxLength, setOriginalOutputMaxLength] = useState(5000);
   const [savingOutputMaxLength, setSavingOutputMaxLength] = useState(false);
   const [outputMaxLengthMessage, setOutputMaxLengthMessage] = useState(null);
+  const [pythonExecOutputMaxLength, setPythonExecOutputMaxLength] = useState(5000);
+  const [originalPythonExecOutputMaxLength, setOriginalPythonExecOutputMaxLength] = useState(5000);
+  const [savingPythonExecOutputMaxLength, setSavingPythonExecOutputMaxLength] = useState(false);
+  const [pythonExecOutputMaxLengthMessage, setPythonExecOutputMaxLengthMessage] = useState(null);
+  const [httpRequestOutputMaxLength, setHttpRequestOutputMaxLength] = useState(5000);
+  const [originalHttpRequestOutputMaxLength, setOriginalHttpRequestOutputMaxLength] = useState(5000);
+  const [savingHttpRequestOutputMaxLength, setSavingHttpRequestOutputMaxLength] = useState(false);
+  const [httpRequestOutputMaxLengthMessage, setHttpRequestOutputMaxLengthMessage] = useState(null);
   const [commandHistoryLimit, setCommandHistoryLimit] = useState(10);
   const [originalHistoryLimit, setOriginalHistoryLimit] = useState(10);
   const [savingHistoryLimit, setSavingHistoryLimit] = useState(false);
@@ -70,6 +78,8 @@ const Settings = () => {
     loadCommandTimeout();
     loadApprovalTimeout();
     loadOutputMaxLength();
+    loadPythonExecOutputMaxLength();
+    loadHttpRequestOutputMaxLength();
     loadCommandHistoryLimit();
     loadExegolContainers();
     loadUploadLimits();
@@ -251,6 +261,80 @@ const Settings = () => {
 
   const handleOutputMaxLengthPreset = (value) => {
     setOutputMaxLength(value);
+  };
+
+  const loadPythonExecOutputMaxLength = async () => {
+    try {
+      const { data } = await apiClient.get('/system/settings/python_exec_output_max_length');
+      const val = parseInt(data.value);
+      setPythonExecOutputMaxLength(val);
+      setOriginalPythonExecOutputMaxLength(val);
+    } catch {
+      setPythonExecOutputMaxLength(5000);
+      setOriginalPythonExecOutputMaxLength(5000);
+    }
+  };
+
+  const handleSavePythonExecOutputMaxLength = async () => {
+    if (pythonExecOutputMaxLength !== -1 && (pythonExecOutputMaxLength < 500 || pythonExecOutputMaxLength > 100000)) {
+      setPythonExecOutputMaxLengthMessage({ type: 'error', text: 'Must be between 500 and 100000 characters, or -1 for unlimited' });
+      setTimeout(() => setPythonExecOutputMaxLengthMessage(null), 5000);
+      return;
+    }
+    setSavingPythonExecOutputMaxLength(true);
+    setPythonExecOutputMaxLengthMessage(null);
+    try {
+      await apiClient.put('/system/settings/python_exec_output_max_length', { value: pythonExecOutputMaxLength.toString() });
+      setOriginalPythonExecOutputMaxLength(pythonExecOutputMaxLength);
+      setPythonExecOutputMaxLengthMessage({ type: 'success', text: 'python_exec output limit updated' });
+      setTimeout(() => setPythonExecOutputMaxLengthMessage(null), 3000);
+    } catch (error) {
+      setPythonExecOutputMaxLengthMessage({ type: 'error', text: error.response?.data?.detail || 'Failed to save' });
+      setTimeout(() => setPythonExecOutputMaxLengthMessage(null), 5000);
+    } finally {
+      setSavingPythonExecOutputMaxLength(false);
+    }
+  };
+
+  const handlePythonExecOutputMaxLengthPreset = (value) => {
+    setPythonExecOutputMaxLength(value);
+  };
+
+  const loadHttpRequestOutputMaxLength = async () => {
+    try {
+      const { data } = await apiClient.get('/system/settings/http_request_output_max_length');
+      const val = parseInt(data.value);
+      setHttpRequestOutputMaxLength(val);
+      setOriginalHttpRequestOutputMaxLength(val);
+    } catch {
+      setHttpRequestOutputMaxLength(5000);
+      setOriginalHttpRequestOutputMaxLength(5000);
+    }
+  };
+
+  const handleSaveHttpRequestOutputMaxLength = async () => {
+    if (httpRequestOutputMaxLength !== -1 && (httpRequestOutputMaxLength < 500 || httpRequestOutputMaxLength > 100000)) {
+      setHttpRequestOutputMaxLengthMessage({ type: 'error', text: 'Must be between 500 and 100000 characters, or -1 for unlimited' });
+      setTimeout(() => setHttpRequestOutputMaxLengthMessage(null), 5000);
+      return;
+    }
+    setSavingHttpRequestOutputMaxLength(true);
+    setHttpRequestOutputMaxLengthMessage(null);
+    try {
+      await apiClient.put('/system/settings/http_request_output_max_length', { value: httpRequestOutputMaxLength.toString() });
+      setOriginalHttpRequestOutputMaxLength(httpRequestOutputMaxLength);
+      setHttpRequestOutputMaxLengthMessage({ type: 'success', text: 'http_request output limit updated' });
+      setTimeout(() => setHttpRequestOutputMaxLengthMessage(null), 3000);
+    } catch (error) {
+      setHttpRequestOutputMaxLengthMessage({ type: 'error', text: error.response?.data?.detail || 'Failed to save' });
+      setTimeout(() => setHttpRequestOutputMaxLengthMessage(null), 5000);
+    } finally {
+      setSavingHttpRequestOutputMaxLength(false);
+    }
+  };
+
+  const handleHttpRequestOutputMaxLengthPreset = (value) => {
+    setHttpRequestOutputMaxLength(value);
   };
 
   const loadCommandHistoryLimit = async () => {
@@ -699,88 +783,6 @@ const Settings = () => {
                 )}
               </div>
 
-              {/* Output Max Length Setting */}
-              <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg p-4 mt-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <Terminal className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
-                  <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">Output Max Length</span>
-                </div>
-
-                {/* Preset Buttons */}
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {[
-                    { label: '1K', value: 1000 },
-                    { label: '2.5K', value: 2500 },
-                    { label: '5K', value: 5000 },
-                    { label: '10K', value: 10000 },
-                    { label: '50K', value: 50000 },
-                    { label: 'Unlimited', value: -1 }
-                  ].map((preset) => (
-                    <button
-                      key={preset.value}
-                      onClick={() => handleOutputMaxLengthPreset(preset.value)}
-                      className={`px-2.5 py-1 text-xs font-medium rounded border transition-colors ${outputMaxLength === preset.value
-                        ? 'bg-primary-600 text-white border-primary-600'
-                        : 'bg-white dark:bg-neutral-700 text-neutral-700 dark:text-neutral-200 border-neutral-300 dark:border-neutral-600 hover:border-neutral-400 dark:hover:border-neutral-500'
-                        }`}
-                    >
-                      {preset.label}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Custom Input */}
-                <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    min="-1"
-                    max="100000"
-                    value={outputMaxLength}
-                    onChange={(e) => setOutputMaxLength(parseInt(e.target.value) || 500)}
-                    className="w-32 px-2 py-1.5 border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 rounded text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  />
-                  <span className="text-xs text-neutral-600 dark:text-neutral-400">
-                    characters ({formatOutputLength(outputMaxLength)})
-                  </span>
-                  <button
-                    onClick={handleSaveOutputMaxLength}
-                    disabled={savingOutputMaxLength || outputMaxLength === originalOutputMaxLength}
-                    className="ml-auto px-3 py-1.5 bg-primary-600 text-white rounded text-xs font-medium hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
-                  >
-                    {savingOutputMaxLength ? (
-                      <>
-                        <RefreshCw className="w-3 h-3 animate-spin" />
-                        Saving
-                      </>
-                    ) : (
-                      <>
-                        <Save className="w-3 h-3" />
-                        Save
-                      </>
-                    )}
-                  </button>
-                </div>
-
-                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-2">
-                  Controls how much command output is shown before truncation. Use -1 for unlimited output.
-                </p>
-
-                {/* Success/Error Message */}
-                {outputMaxLengthMessage && (
-                  <div className={`mt-2 p-2 rounded text-xs flex items-center gap-1.5 ${outputMaxLengthMessage.type === 'success'
-                    ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300'
-                    : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300'
-                    }`}>
-                    {outputMaxLengthMessage.type === 'success' ? (
-                      <CheckCircle className="w-3 h-3 flex-shrink-0" />
-                    ) : (
-                      <AlertCircle className="w-3 h-3 flex-shrink-0" />
-                    )}
-                    <span>{outputMaxLengthMessage.text}</span>
-                  </div>
-                )}
-              </div>
-
               {/* Command History Limit Setting */}
               <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg p-4 mt-4">
                 <div className="flex items-center gap-2 mb-3">
@@ -853,6 +855,127 @@ const Settings = () => {
                   </div>
                 )}
               </div>
+
+              {/* Output Max Length — grouped */}
+              <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg p-4 mt-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <Terminal className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
+                  <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">Output Max Length</span>
+                </div>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-3">
+                  Controls how much output is shown to the AI before truncation. Use -1 for unlimited. Configured per tool.
+                </p>
+
+                {(() => {
+                  const OUTPUT_PRESETS = [
+                    { label: '1K', value: 1000 },
+                    { label: '2.5K', value: 2500 },
+                    { label: '5K', value: 5000 },
+                    { label: '10K', value: 10000 },
+                    { label: '50K', value: 50000 },
+                    { label: '∞', value: -1 }
+                  ];
+
+                  const rows = [
+                    {
+                      key: 'execute',
+                      label: 'execute',
+                      value: outputMaxLength,
+                      original: originalOutputMaxLength,
+                      saving: savingOutputMaxLength,
+                      message: outputMaxLengthMessage,
+                      setValue: setOutputMaxLength,
+                      onSave: handleSaveOutputMaxLength,
+                    },
+                    {
+                      key: 'python_exec',
+                      label: 'python_exec',
+                      value: pythonExecOutputMaxLength,
+                      original: originalPythonExecOutputMaxLength,
+                      saving: savingPythonExecOutputMaxLength,
+                      message: pythonExecOutputMaxLengthMessage,
+                      setValue: setPythonExecOutputMaxLength,
+                      onSave: handleSavePythonExecOutputMaxLength,
+                    },
+                    {
+                      key: 'http_request',
+                      label: 'http_request',
+                      value: httpRequestOutputMaxLength,
+                      original: originalHttpRequestOutputMaxLength,
+                      saving: savingHttpRequestOutputMaxLength,
+                      message: httpRequestOutputMaxLengthMessage,
+                      setValue: setHttpRequestOutputMaxLength,
+                      onSave: handleSaveHttpRequestOutputMaxLength,
+                    },
+                  ];
+
+                  return (
+                    <div className="divide-y divide-neutral-100 dark:divide-neutral-700">
+                      {rows.map((row, idx) => (
+                        <div key={row.key} className={`${idx > 0 ? 'pt-3' : ''} ${idx < rows.length - 1 ? 'pb-3' : ''}`}>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <code className="text-xs bg-neutral-100 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-200 px-1.5 py-0.5 rounded w-28 shrink-0 truncate">
+                              {row.label}
+                            </code>
+                            {OUTPUT_PRESETS.map((p) => (
+                              <button
+                                key={p.value}
+                                onClick={() => row.setValue(p.value)}
+                                className={`px-2 py-0.5 text-xs font-medium rounded border transition-colors ${row.value === p.value
+                                  ? 'bg-primary-600 text-white border-primary-600'
+                                  : 'bg-white dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 border-neutral-300 dark:border-neutral-600 hover:border-neutral-400 dark:hover:border-neutral-500'
+                                  }`}
+                              >
+                                {p.label}
+                              </button>
+                            ))}
+                            <input
+                              type="number"
+                              min="-1"
+                              max="100000"
+                              value={row.value}
+                              onChange={(e) => row.setValue(parseInt(e.target.value) || 500)}
+                              className="w-24 px-2 py-1 border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 rounded text-xs focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                            />
+                            <span className="text-xs text-neutral-500 dark:text-neutral-400 hidden sm:inline">
+                              {formatOutputLength(row.value)}
+                            </span>
+                            <button
+                              onClick={row.onSave}
+                              disabled={row.saving || row.value === row.original}
+                              className="ml-auto px-3 py-1 bg-primary-600 text-white rounded text-xs font-medium hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                            >
+                              {row.saving ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                              {row.saving ? 'Saving' : 'Save'}
+                            </button>
+                          </div>
+                          {row.message && (
+                            <div className={`mt-1.5 p-1.5 rounded text-xs flex items-center gap-1.5 ${row.message.type === 'success'
+                              ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300'
+                              : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300'
+                              }`}>
+                              {row.message.type === 'success'
+                                ? <CheckCircle className="w-3 h-3 flex-shrink-0" />
+                                : <AlertCircle className="w-3 h-3 flex-shrink-0" />}
+                              <span>{row.message.text}</span>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Output Max Length warning */}
+              {[outputMaxLength, pythonExecOutputMaxLength, httpRequestOutputMaxLength].some(v => v > 5000 && v !== -1) && (
+                <div className="mt-4 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-amber-500 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                  <div className="text-xs text-amber-700 dark:text-amber-300">
+                    <span className="font-semibold">High token consumption warning —</span> One or more tools have an output limit above 5K characters. Large outputs can consume enormous numbers of tokens per command and are not recommended for large or verbose applications.
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Upload Limits */}
