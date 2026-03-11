@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, Fragment } from 'react';
+import { useState, useEffect, useCallback, useRef, Fragment } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Terminal, Clock, Search, ChevronDown, ChevronRight, Check, X, Plus, Activity, TrendingUp, AlertCircle, BarChart3 } from '../components/icons';
 import commandService from '../services/commandService';
@@ -54,6 +54,12 @@ const Commands = () => {
   // WebSocket for real-time updates
   const { subscribe } = useWebSocketContext();
 
+  // Keep filters in a ref so WebSocket handlers always see the latest values
+  const filterRef = useRef({ statusFilter, searchQuery });
+  useEffect(() => {
+    filterRef.current = { statusFilter, searchQuery };
+  }, [statusFilter, searchQuery]);
+
   // Load initial data
   useEffect(() => {
     loadStats();
@@ -76,6 +82,21 @@ const Commands = () => {
 
   // Subscribe to WebSocket events for real-time updates
   useEffect(() => {
+    const prependCommand = (data, isSuccess) => {
+      const newCmd = data?.command;
+      if (!newCmd) return;
+      const { statusFilter: sf, searchQuery: sq } = filterRef.current;
+      const statusMatch = sf === 'all' || (isSuccess ? sf === 'passed' : sf === 'failed');
+      const searchMatch = !sq ||
+        newCmd.command?.toLowerCase().includes(sq.toLowerCase()) ||
+        newCmd.assessment_name?.toLowerCase().includes(sq.toLowerCase());
+      if (statusMatch && searchMatch) {
+        setCommands(prev => [newCmd, ...prev]);
+        setTotal(prev => prev + 1);
+      }
+      loadStats();
+    };
+
     const unsubscribes = [
       subscribe('command_pending_approval', () => loadPendingCommands()),
       subscribe('command_approved', () => {
@@ -85,6 +106,8 @@ const Commands = () => {
       }),
       subscribe('command_rejected', () => loadPendingCommands()),
       subscribe('command_timeout', () => loadPendingCommands()),
+      subscribe('command_completed', (data) => prependCommand(data, true)),
+      subscribe('command_failed', (data) => prependCommand(data, false)),
     ];
     return () => unsubscribes.forEach(unsub => unsub && unsub());
   }, [subscribe]);

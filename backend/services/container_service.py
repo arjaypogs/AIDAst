@@ -437,6 +437,7 @@ class ContainerService:
             # Broadcast WebSocket event
             from schemas.command import CommandResponse
             command_dict = CommandResponse.model_validate(command_log).model_dump(mode='json')
+            command_dict['assessment_name'] = assessment.name if assessment else None
 
             if command_log.success:
                 await manager.broadcast(
@@ -685,6 +686,7 @@ class ContainerService:
             # WebSocket broadcast
             from schemas.command import CommandResponse
             command_dict = CommandResponse.model_validate(command_log).model_dump(mode='json')
+            command_dict['assessment_name'] = assessment.name if assessment else None
             if command_log.success:
                 await manager.broadcast(
                     event_command_completed(assessment_id, command_dict),
@@ -955,6 +957,7 @@ except Exception as _e:
             # WebSocket broadcast
             from schemas.command import CommandResponse
             command_dict = CommandResponse.model_validate(command_log).model_dump(mode='json')
+            command_dict['assessment_name'] = assessment.name if assessment else None
             if command_log.success:
                 await manager.broadcast(
                     event_command_completed(assessment_id, command_dict),

@@ -17,6 +17,9 @@ class ConnectionManager:
         # All active connections
         self.active_connections: List[WebSocket] = []
 
+        # Global connections (no assessment_id) — receive all events
+        self.global_connections: Set[WebSocket] = set()
+
         # Connections grouped by assessment_id for targeted broadcasting
         self.assessment_connections: Dict[int, Set[WebSocket]] = {}
 
@@ -46,6 +49,7 @@ class ConnectionManager:
                 assessment_connections=len(self.assessment_connections[assessment_id])
             )
         else:
+            self.global_connections.add(websocket)
             logger.info(
                 "WebSocket connected (global)",
                 total_connections=len(self.active_connections)
@@ -61,6 +65,9 @@ class ConnectionManager:
         # Remove from active connections
         if websocket in self.active_connections:
             self.active_connections.remove(websocket)
+
+        # Remove from global connections
+        self.global_connections.discard(websocket)
 
         # Remove from assessment-specific connections
         for assessment_id, connections in self.assessment_connections.items():
@@ -90,8 +97,9 @@ class ConnectionManager:
 
         # Determine target connections
         if assessment_id is not None:
-            # Broadcast to assessment-specific connections
-            target_connections = self.assessment_connections.get(assessment_id, set())
+            # Broadcast to assessment-specific connections + global connections
+            # Global connections (e.g. /commands page) must receive all events
+            target_connections = self.assessment_connections.get(assessment_id, set()) | self.global_connections
             logger.debug(
                 "Broadcasting to assessment",
                 event_type=event.get("type"),
