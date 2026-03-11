@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, FileText, Clock, User, Target, Search, Filter, FolderPlus, X } from '../components/icons';
+import { Plus, FileText, Clock, User, Target, Search, FolderPlus, X } from '../components/icons';
 import apiClient from '../services/api';
 import folderService from '../services/folderService';
 import CreateAssessmentModal from '../components/assessment/CreateAssessmentModal';
@@ -23,11 +23,9 @@ const Assessments = () => {
   const [isEditFolderModalOpen, setIsEditFolderModalOpen] = useState(false);
   const [editingFolder, setEditingFolder] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
   const [activeView, setActiveView] = useState('active'); // 'active', 'completed', 'archived', or folder ID
   const [actionLoading, setActionLoading] = useState(false);
   const searchInputRef = useRef(null);
-  const searchContainerRef = useRef(null);
 
   // WebSocket for real-time updates
   const { subscribe } = useWebSocketContext();
@@ -78,27 +76,8 @@ const Assessments = () => {
         searchInputRef.current?.blur();
       }
     };
-
     window.addEventListener('keydown', handleEscape);
     return () => window.removeEventListener('keydown', handleEscape);
-  }, [searchQuery]);
-
-  // Handle click outside search to clear
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target)) {
-        if (document.activeElement === searchInputRef.current) {
-          setSearchQuery('');
-          searchInputRef.current?.blur();
-        }
-      }
-    };
-
-    if (searchQuery || document.activeElement === searchInputRef.current) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [searchQuery]);
 
   const loadData = async () => {
@@ -204,12 +183,13 @@ const Assessments = () => {
     await loadAssessmentsForView();
   };
 
-  const filteredAssessments = assessments.filter((assessment) => {
-    const matchesSearch = assessment.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      assessment.client_name?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = filterStatus === 'all' || assessment.status === filterStatus;
-    return matchesSearch && matchesStatus;
-  });
+  // When search is active, search across ALL assessments (not just the current view)
+  const filteredAssessments = searchQuery
+    ? allAssessments.filter((assessment) =>
+        assessment.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        assessment.client_name?.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : assessments;
 
   // Get current view name
   const getCurrentViewName = () => {
@@ -277,56 +257,46 @@ const Assessments = () => {
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
-                  {getCurrentViewName()}
+                  {searchQuery ? 'Search results' : getCurrentViewName()}
                 </h2>
                 <p className="text-sm text-neutral-600 dark:text-neutral-400">
                   {filteredAssessments.length} assessment{filteredAssessments.length !== 1 ? 's' : ''}
+                  {searchQuery && ` across all views`}
                 </p>
               </div>
             </div>
           </div>
 
-          {/* Search Bar - Optional for filtering within view */}
-          {assessments.length > 10 && (
-            <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg p-4">
-              <div className="flex items-center gap-4">
-                <div ref={searchContainerRef} className="flex-1 max-w-md relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 dark:text-neutral-500" />
-                  <input
-                    ref={searchInputRef}
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search assessments..."
-                    className="input pl-9 pr-9"
-                  />
-                  {searchQuery && (
-                    <button
-                      onClick={() => setSearchQuery('')}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 dark:text-neutral-500 hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors"
-                      title="Clear search (Esc)"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Filter className="w-4 h-4 text-neutral-400 dark:text-neutral-500" />
-                  <select
-                    value={filterStatus}
-                    onChange={(e) => setFilterStatus(e.target.value)}
-                    className="input input-sm w-40"
+          {/* Search Bar */}
+          <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg p-4">
+            <div className="flex items-center gap-3">
+              <div className="flex-1 max-w-md relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 dark:text-neutral-500" />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search all assessments..."
+                  className="input pl-9 pr-9"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 dark:text-neutral-500 hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors"
+                    title="Clear search (Esc)"
                   >
-                    <option value="all">All Status</option>
-                    <option value="active">Active</option>
-                    <option value="completed">Completed</option>
-                    <option value="archived">Archived</option>
-                  </select>
-                </div>
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
               </div>
+              {searchQuery && (
+                <span className="text-xs text-neutral-500 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-700 px-2 py-1 rounded">
+                  Searching all assessments
+                </span>
+              )}
             </div>
-          )}
+          </div>
 
           {/* Assessments Table */}
           <AssessmentsTable
