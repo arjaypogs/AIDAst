@@ -333,6 +333,10 @@ async def _handle_load_assessment(arguments: dict, mcp_service) -> List[TextCont
         # Get command_history_limit from settings (default: 10)
         limit = await mcp_service.get_command_history_limit()
 
+        # Skip if limit is 0 (disabled)
+        if limit <= 0:
+            raise Exception("Command history disabled (limit=0)")
+
         # Fetch commands for this assessment
         commands_response = await mcp_service.http_client.get(
             f"{mcp_service.backend_url}/assessments/{assessment['id']}/commands",
@@ -382,6 +386,21 @@ async def _handle_load_assessment(arguments: dict, mcp_service) -> List[TextCont
                 if notes:
                     response += f" | Notes: {notes}"
                 response += "\n"
+                # Show actual credential value
+                if ctype == "bearer_token" or ctype == "api_key":
+                    if cred.get("token"):
+                        response += f"  Value: `{cred['token']}`\n"
+                elif ctype == "basic_auth" or ctype == "ssh":
+                    if cred.get("username"):
+                        response += f"  Username: `{cred['username']}`\n"
+                    if cred.get("password"):
+                        response += f"  Password: `{cred['password']}`\n"
+                elif ctype == "cookie":
+                    if cred.get("cookie_value"):
+                        response += f"  Cookie: `{cred['cookie_value']}`\n"
+                elif ctype == "custom":
+                    if cred.get("custom_data"):
+                        response += f"  Data: {cred['custom_data']}\n"
         else:
             response += "\n## Credentials\nNo credentials configured yet. Use `credentials_add` to add tokens, cookies, etc.\n"
     except Exception:
