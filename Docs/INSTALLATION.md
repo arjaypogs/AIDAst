@@ -16,8 +16,9 @@ Before we start, make sure you have:
 | **Git** | Any | `git --version` |
 
 Also needed:
-- **Exegol** container ([Install guide](https://docs.exegol.com/first-install/))
 - **An AI client** that supports MCP — Claude Code or Kimi CLI recommended (see Step 5)
+
+> **Exegol users:** AIDA supports Exegol as an alternative container. You will be asked at first launch.
 
 ---
 
@@ -38,10 +39,25 @@ The easiest way - Docker Compose handles everything:
 ./start.sh
 ```
 
+**On first run**, you will be asked to choose your pentesting container:
+
+```
+  [1] aida-pentest
+      Built-in, managed by AIDA — starts automatically with ./start.sh
+      Size: ~2 GB  |  Tools: nmap, ffuf, gobuster, sqlmap, nikto...
+
+  [2] Exegol
+      Third-party container — requires separate install: https://docs.exegol.com
+      Size: ~20-40 GB  |  Tools: ~400+ security tools
+```
+
+Both options are fully supported. Press Enter or `1` for `aida-pentest` (default). If you're already an Exegol user, select `2` to keep using it. You can switch between them anytime in Settings.
+
 This starts:
 - **PostgreSQL** on port `5432` - The database
 - **Backend API** on port `8000` - FastAPI server
 - **Frontend** on port `5173` - React dashboard
+- **aida-pentest** - Pentesting container (if selected above)
 
 ### Step 3: Verify It Works
 
@@ -51,24 +67,46 @@ You should see the AIDA dashboard.
 
 ---
 
-## Step 4: Install and Setup Exegol
+## Step 4: Pentesting Container
 
-**Install Exegol:** Follow the official guide → https://docs.exegol.com/first-install
+AIDA supports two pentesting containers. You chose one during Step 2 — here's what to do next for each.
 
-**Start the container:**
+### Option 1 — aida-pentest (built-in)
+
+If you selected `aida-pentest`, you're done. The container started automatically as part of `docker compose up` — no extra steps needed.
+
+**Disk space:** ~2 GB.
+
+**What's included:** nmap, ffuf, gobuster, sqlmap, nikto, dirb, hydra, whatweb, subfinder, dnsx, openssl + Python libs (impacket, scapy, pwntools, paramiko, requests...) + SecLists wordlists.
+
+This covers all the essential tools for a typical assessment. If you need additional tools, you can install them directly inside the container at any time:
+
 ```bash
+docker exec -it aida-pentest bash
+# then install whatever you need, e.g.:
+apt-get install -y metasploit-framework
+```
+
+Or switch to Exegol (Option 2) if you want 400+ tools pre-installed out of the box.
+
+### Option 2 — Exegol
+
+If you selected Exegol (or want to switch to it), you need to install it separately:
+
+```bash
+# Install Exegol
+pip install exegol
+
+# Pull an image (web is sufficient, full is 40+ GB)
+exegol install web
+
+# Start a container named "aida"
 exegol start aida
 ```
 
-When it asks which image to use, select ```web``` or the ```full``` one
+Then in AIDA Settings, make sure your default container is set to `exegol-aida`.
 
-Yeah, I know 40GB is a lot. I'm working on a lighter alternative.
-
-**Configure AIDA:**
-
-1. Go to http://localhost:5173/settings 
-2. Under **Tools**, check if your Exegol container is detected
-3. Set your default container name to `exegol-aida` (or whatever you named it)
+> **Switching containers:** You can change your container preference anytime in **Settings → Container**. This affects new assessments; existing ones keep their assigned container.
 
 ---
 
@@ -273,9 +311,9 @@ Run through this checklist:
 | Check | How | Expected |
 |-------|-----|----------|
 | Platform running | http://localhost:5173 | Dashboard loads |
-| API healthy |http://localhost:8000/health | `{"status": "healthy"}` |
+| API healthy | http://localhost:8000/health | `{"status": "healthy"}` |
 | Database connected | Check backend logs | No connection errors |
-| Exegol container | `docker ps \| grep exegol` | Container running |
+| Pentest container | `docker ps \| grep aida-pentest` or `docker ps \| grep exegol` | Container running |
 | MCP server | Check AI client | AIDA tools visible |
 
 

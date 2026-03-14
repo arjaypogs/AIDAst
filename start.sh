@@ -137,6 +137,47 @@ if [[ ! -f frontend/.env ]]; then
 fi
 
 # ==============================================================================
+# FIRST-RUN: CONTAINER MODE SELECTION
+# ==============================================================================
+
+CONTAINER_PREFS_FILE="$SCRIPT_DIR/.aida/container-preference"
+mkdir -p "$SCRIPT_DIR/.aida"
+
+if [[ ! -f "$CONTAINER_PREFS_FILE" ]]; then
+    section "First-Run Setup"
+    echo ""
+    echo "  AIDA needs a pentesting container to run security tools."
+    echo ""
+    echo "  [1] aida-pentest  (Recommended)"
+    echo "      Built-in, managed by AIDA — starts automatically with ./start.sh"
+    echo "      Size: ~2 GB |  Tools: nmap, ffuf, gobuster, sqlmap, nikto..."
+    echo ""
+    echo "  [2] Exegol"
+    echo "      Third-party, requires separate install: https://docs.exegol.com"
+    echo "      Size: ~20-40 GB  |  Tools: ~400+ security tools"
+    echo ""
+    echo "  You can always switch containers in Settings."
+    echo ""
+    read -p "  Your choice [1/2, default=1]: " -n 1 -r CONTAINER_CHOICE
+    echo ""
+    echo ""
+
+    if [[ "$CONTAINER_CHOICE" == "2" ]]; then
+        echo "exegol" > "$CONTAINER_PREFS_FILE"
+        warn "Exegol mode selected."
+        warn "Make sure Exegol is installed and a container is running before using AIDA:"
+        warn "  Install: https://docs.exegol.com/first-install"
+        warn "  Start:   exegol start aida"
+        echo ""
+    else
+        echo "aida-pentest" > "$CONTAINER_PREFS_FILE"
+        log "aida-pentest selected — the built-in container will start automatically."
+    fi
+fi
+
+CONTAINER_MODE=$(cat "$CONTAINER_PREFS_FILE" 2>/dev/null || echo "aida-pentest")
+
+# ==============================================================================
 # PYTHON ENVIRONMENTS (Only if missing)
 # ==============================================================================
 
@@ -205,10 +246,21 @@ fi
 # Check if images exist
 BACKEND_IMAGE=$(docker images -q aida-backend 2>/dev/null)
 FRONTEND_IMAGE=$(docker images -q aida-frontend 2>/dev/null)
+PENTEST_IMAGE=$(docker images -q aida-aida-pentest 2>/dev/null)
 
-if [[ -z "$BACKEND_IMAGE" ]] || [[ -z "$FRONTEND_IMAGE" ]] || [[ "$FORCE_BUILD" == "true" ]]; then
-    log "Building Docker images..."
-    docker compose build --quiet
+BUILD_NEEDED=false
+[[ -z "$BACKEND_IMAGE" || -z "$FRONTEND_IMAGE" ]] && BUILD_NEEDED=true
+[[ "$CONTAINER_MODE" == "aida-pentest" && -z "$PENTEST_IMAGE" ]] && BUILD_NEEDED=true
+[[ "$FORCE_BUILD" == "true" ]] && BUILD_NEEDED=true
+
+if [[ "$BUILD_NEEDED" == "true" ]]; then
+    if [[ "$CONTAINER_MODE" == "aida-pentest" ]]; then
+        log "Building Docker images (first build of aida-pentest may take a few minutes)..."
+        docker compose build --quiet
+    else
+        log "Building Docker images..."
+        docker compose build --quiet backend frontend
+    fi
     log "Images built"
 else
     log "Docker images already exist (use --build to rebuild)"
@@ -226,11 +278,19 @@ if [[ "$RUNNING_CONTAINERS" -ge 3 ]]; then
     log "Containers already running"
 elif [[ "$STOPPED_CONTAINERS" -gt 0 ]]; then
     log "Starting existing containers..."
-    docker compose start 2>/dev/null
+    if [[ "$CONTAINER_MODE" == "aida-pentest" ]]; then
+        docker compose start 2>/dev/null
+    else
+        docker compose start postgres backend frontend 2>/dev/null
+    fi
 else
     log "Creating and starting containers..."
     # Suppress volume warning (cosmetic - data is preserved)
-    docker compose up -d 2>&1 | grep -v "already exists but was created for project" || true
+    if [[ "$CONTAINER_MODE" == "aida-pentest" ]]; then
+        docker compose up -d 2>&1 | grep -v "already exists but was created for project" || true
+    else
+        docker compose up -d postgres backend frontend 2>&1 | grep -v "already exists but was created for project" || true
+    fi
 fi
 
 # ==============================================================================
@@ -271,15 +331,27 @@ if [[ -f "$SCRIPT_DIR/tools/folder_opener.py" ]]; then
 fi
 
 # ==============================================================================
-# EXEGOL CHECK
+# PENTEST CONTAINER STATUS
 # ==============================================================================
 
-EXEGOL_RUNNING=$(docker ps --format "{{.Names}}" 2>/dev/null | grep -i "^exegol-" || true)
-if [[ -z "$EXEGOL_RUNNING" ]]; then
-    echo ""
-    warn "No Exegol container running!"
-    warn "AIDA needs Exegol for pentesting tools."
-    warn "Start one with: exegol start <name>"
+if [[ "$CONTAINER_MODE" == "exegol" ]]; then
+    EXEGOL_RUNNING=$(docker ps --format "{{.Names}}" 2>/dev/null | grep -i "^exegol-" || true)
+    if [[ -z "$EXEGOL_RUNNING" ]]; then
+        echo ""
+        warn "No Exegol container running!"
+        warn "Start one with:      exegol start <name>"
+        warn "Switch to built-in:  rm .aida/container-preference && ./start.sh"
+    else
+        log "Exegol container: $EXEGOL_RUNNING"
+    fi
+else
+    PENTEST_RUNNING=$(docker ps --format "{{.Names}}" 2>/dev/null | grep "^aida-pentest$" || true)
+    if [[ -z "$PENTEST_RUNNING" ]]; then
+        warn "aida-pentest not running — starting..."
+        docker compose up -d aida-pentest 2>&1 | grep -v "already" || true
+    else
+        log "Pentesting container: aida-pentest"
+    fi
 fi
 
 # ==============================================================================

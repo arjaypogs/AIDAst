@@ -18,7 +18,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/License-AGPL_v3-blue" alt="License">
   <img src="https://img.shields.io/badge/MCP-Compatible-green" alt="MCP">
-  <img src="https://img.shields.io/badge/Docker-Exegol-orange" alt="Exegol">
+  <img src="https://img.shields.io/badge/Container-aida--pentest-orange" alt="aida-pentest">
   <img src="https://img.shields.io/badge/Version-1.0.0--alpha-purple" alt="Version">
 </p>
 
@@ -29,7 +29,7 @@
 **AIDA** connects AI assistants to a real pentesting environment. Instead of just *talking* about security testing, your AI can actually *do* it.
 
 Here's the deal:
--  **Exegol Docker container** with 400+ security tools (nmap, sqlmap, ffuf, nuclei...)
+-  **Your choice of pentesting container** — use the built-in `aida-pentest` (~2 GB, starts automatically, covers all the essential tools) or bring your own [Exegol](https://github.com/ThePorgs/Exegol) container (400+ tools, ~20-40 GB). You pick at first launch — and can switch anytime.
 -  **MCP integration** that works with *any* AI client (Claude, Gemini, GPT, Antigravity...)
 -  **Web dashboard** to track findings, commands, and progress
 -  **Structured workflow** from recon to exploitation
@@ -52,7 +52,7 @@ Without execution capabilities, security testing becomes a tedious back-and-fort
 
 **AIDA changes this** by connecting AI directly to a professional pentesting environment:
 
-- 🔧 **Direct Execution** - 400+ tools in Exegol (nmap, sqlmap, ffuf, nuclei...)
+- 🔧 **Direct Execution** - Built-in pentesting environment (nmap, sqlmap, ffuf, nuclei...)
 - 🧠 **Persistent Memory** - Full context maintained across sessions in structured database
 - 📝 **Auto Documentation** - Findings tracked as cards with severity, proof, and technical analysis
 - ⛓️ **Attack Chains** - AI connects dots between discoveries to build multi-step exploits
@@ -85,8 +85,9 @@ Without execution capabilities, security testing becomes a tedious back-and-fort
 
 ### Prerequisites
 
-- **Docker Desktop** - For running Exegol and the platform
+- **Docker Desktop** - To run the platform
 - **An AI Client** - Claude Desktop, Claude Code, Gemini CLI, Antigravity... pick your favorite
+- **Pentesting container** - `aida-pentest` built-in (default, ~2 GB) or [Exegol](https://github.com/ThePorgs/Exegol) if you need 400+ tools
 
 
 ```bash
@@ -101,7 +102,7 @@ cd AIDA
 open http://localhost:5173
 ```
 
-That's it. The platform is running.
+On first run, `./start.sh` will ask which pentesting container you want to use — the built-in `aida-pentest` or your own Exegol container. Default is `aida-pentest`. You can change this anytime in Settings.
 
 ### Connect Your AI
 
@@ -199,7 +200,7 @@ RECON
    list_recon        - View recon data
 
 EXECUTION
-   execute           - Run any command in Exegol
+   execute           - Run any command in the pentesting container
    scan              - Quick scans (nmap, gobuster, ffuf...)
    subdomain_enum    - Find subdomains
    ssl_analysis      - Check SSL/TLS
@@ -227,6 +228,8 @@ AIDA/
 ├── frontend/            # React dashboard
 │   ├── src/pages/       # Dashboard, Assessments, Settings...
 │   └── src/components/  # Reusable UI components
+├── pentest/             # Built-in pentesting container (aida-pentest)
+│   └── Dockerfile       # Ubuntu 22.04 + nmap, ffuf, gobuster, sqlmap...
 ├── Docs/                # AI prompts and methodology
 ├── aida.py              # CLI launcher
 ├── start.sh             # Start the platform
@@ -276,7 +279,6 @@ AIDA is actively developed. Want to contribute?
 
 **Planned Features:**
 
-- Build our docker image
 - Frontend redesign with flat, professional UI
 - OWASP testing guidelines integration
 - Enhanced phase workflow system
@@ -301,9 +303,9 @@ Contact: **Vasco0x4@proton.me**
 
 ## Credits
 
-- [**Exegol**](https://github.com/ThePorgs/Exegol) - The pentesting Docker environment
 - [**Anthropic MCP**](https://modelcontextprotocol.io/) - The protocol that makes this possible
-- The security community for all the amazing tools
+- The security community for all the amazing open-source tools
+- [**Exegol**](https://github.com/ThePorgs/Exegol) - Supported as an alternative container for advanced users
 
 ---
 <p align="center">
