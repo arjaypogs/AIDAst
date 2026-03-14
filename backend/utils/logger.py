@@ -81,13 +81,23 @@ def setup_logging(
         log_path = Path(log_dir)
         log_path.mkdir(exist_ok=True)
 
-    # Configure stdlib logging
-    # Use stderr for MCP compatibility (stdout is reserved for MCP JSON protocol)
-    logging.basicConfig(
-        format="%(message)s",
-        stream=sys.stderr,
-        level=getattr(logging, log_level.upper())
-    )
+    # When both file and console logging are disabled (e.g. MCP mode), silence all
+    # output by replacing any handlers basicConfig would add with a NullHandler.
+    # Without this, basicConfig unconditionally attaches a StreamHandler(stderr)
+    # which leaks structured log lines into the terminal via kimi-cli / Claude Code.
+    if not enable_file_logging and not enable_console_logging:
+        root_logger = logging.getLogger()
+        root_logger.handlers = []
+        root_logger.addHandler(logging.NullHandler())
+        root_logger.setLevel(getattr(logging, log_level.upper()))
+    else:
+        # Configure stdlib logging
+        # Use stderr for MCP compatibility (stdout is reserved for MCP JSON protocol)
+        logging.basicConfig(
+            format="%(message)s",
+            stream=sys.stderr,
+            level=getattr(logging, log_level.upper())
+        )
 
     # Configure processors based on format
     processors: list[Processor] = [
