@@ -51,6 +51,8 @@ const Commands = () => {
 
   // Approval state
   const [processingId, setProcessingId] = useState(null);
+  const [expandedPendingId, setExpandedPendingId] = useState(null);
+  const [expandedHistoryId, setExpandedHistoryId] = useState(null);
 
   // WebSocket for real-time updates
   const { subscribe } = useWebSocketContext();
@@ -337,6 +339,24 @@ const Commands = () => {
     return date.toLocaleDateString();
   };
 
+  // Smart preview: context around matched keyword, or first line of command
+  const getCommandPreview = (command, matchedKeywords = []) => {
+    if (!command) return '';
+    if (matchedKeywords && matchedKeywords.length > 0) {
+      const kw = matchedKeywords[0];
+      const idx = command.toLowerCase().indexOf(kw.toLowerCase());
+      if (idx !== -1) {
+        const start = Math.max(0, idx - 35);
+        const end = Math.min(command.length, idx + kw.length + 35);
+        return (start > 0 ? '…' : '') + command.slice(start, end) + (end < command.length ? '…' : '');
+      }
+    }
+    const lines = command.split('\n').filter(l => l.trim());
+    const firstLine = lines[0] || command;
+    const truncated = firstLine.length > 80 ? firstLine.substring(0, 80) + '…' : firstLine;
+    return lines.length > 1 ? `${truncated} [+${lines.length - 1}]` : truncated;
+  };
+
   const filteredHistory = historyCommands.filter(cmd => {
     if (historyFilter === 'all') return true;
     if (historyFilter === 'approved') return cmd.status === 'executed';
@@ -559,7 +579,7 @@ const Commands = () => {
                             </span>
                           ) : (
                             <code className="text-xs font-mono text-neutral-700 dark:text-neutral-300">
-                              {cmd.command.length > 60 ? cmd.command.substring(0, 60) + '...' : cmd.command}
+                              {getCommandPreview(cmd.command)}
                             </code>
                           )}
                         </td>
@@ -587,7 +607,7 @@ const Commands = () => {
                                 ) : cmd.command_type === 'http' ? (
                                   <pre className="block mt-1 p-2 bg-neutral-900 text-blue-300 border border-neutral-700 rounded text-xs font-mono overflow-auto max-h-48 whitespace-pre-wrap">{cmd.source_code}</pre>
                                 ) : (
-                                  <code className="block mt-1 p-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded text-xs font-mono">{cmd.command}</code>
+                                  <pre className="block mt-1 p-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded text-xs font-mono whitespace-pre-wrap break-all">{cmd.command}</pre>
                                 )}
                               </div>
                               {cmd.stdout && (
@@ -714,41 +734,62 @@ const Commands = () => {
                   </thead>
                   <tbody>
                     {pendingCommands.map((cmd) => (
-                      <tr key={cmd.id} className="group">
-                        <td><div className={`w-2 h-2 rounded-full ${getStatusDot(cmd.status)}`} /></td>
-                        <td>
-                          <code className="text-xs font-mono text-neutral-700 dark:text-neutral-300">
-                            {cmd.command.length > 50 ? cmd.command.substring(0, 50) + '...' : cmd.command}
-                          </code>
-                        </td>
-                        <td className="text-sm text-neutral-600 dark:text-neutral-400">{cmd.assessment_name}</td>
-                        <td>
-                          {cmd.matched_keywords?.map((kw) => (
-                            <span key={kw} className="mr-1 px-1.5 py-0.5 text-xs bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 rounded">{kw}</span>
-                          ))}
-                        </td>
-                        <td className="text-xs text-neutral-500">{formatTime(cmd.created_at)}</td>
-                        <td>
-                          <div className="flex items-center gap-1">
-                            <button
-                              onClick={() => handleApprove(cmd.id)}
-                              disabled={processingId === cmd.id}
-                              className="p-1.5 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded"
-                              title="Approve"
-                            >
-                              <Check className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleReject(cmd.id)}
-                              disabled={processingId === cmd.id}
-                              className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
-                              title="Reject"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
+                      <Fragment key={cmd.id}>
+                        <tr
+                          className="group cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800/50"
+                          onClick={() => setExpandedPendingId(expandedPendingId === cmd.id ? null : cmd.id)}
+                        >
+                          <td><div className={`w-2 h-2 rounded-full ${getStatusDot(cmd.status)}`} /></td>
+                          <td>
+                            <code className="text-xs font-mono text-neutral-700 dark:text-neutral-300">
+                              {getCommandPreview(cmd.command, cmd.matched_keywords)}
+                            </code>
+                          </td>
+                          <td className="text-sm text-neutral-600 dark:text-neutral-400">{cmd.assessment_name}</td>
+                          <td>
+                            {cmd.matched_keywords?.map((kw) => (
+                              <span key={kw} className="mr-1 px-1.5 py-0.5 text-xs bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 rounded">{kw}</span>
+                            ))}
+                          </td>
+                          <td className="text-xs text-neutral-500">{formatTime(cmd.created_at)}</td>
+                          <td>
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleApprove(cmd.id); }}
+                                disabled={processingId === cmd.id}
+                                className="p-1.5 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded"
+                                title="Approve"
+                              >
+                                <Check className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleReject(cmd.id); }}
+                                disabled={processingId === cmd.id}
+                                className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
+                                title="Reject"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                              {expandedPendingId === cmd.id
+                                ? <ChevronDown className="w-3 h-3 text-neutral-400" />
+                                : <ChevronRight className="w-3 h-3 text-neutral-400" />
+                              }
+                            </div>
+                          </td>
+                        </tr>
+                        {expandedPendingId === cmd.id && (
+                          <tr>
+                            <td colSpan="6" className="p-0">
+                              <div className="px-4 py-3 bg-neutral-50 dark:bg-neutral-800/50 border-t border-neutral-100 dark:border-neutral-700">
+                                <span className="text-xs font-medium text-neutral-400 uppercase mb-1 block">Full Command</span>
+                                <pre className="text-xs font-mono text-neutral-800 dark:text-neutral-200 bg-neutral-900 dark:bg-black p-3 rounded whitespace-pre-wrap break-all max-h-64 overflow-auto">
+                                  {cmd.command}
+                                </pre>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
                     ))}
                   </tbody>
                 </table>
@@ -794,25 +835,47 @@ const Commands = () => {
                     </thead>
                     <tbody>
                       {filteredHistory.map((cmd) => (
-                        <tr key={cmd.id}>
-                          <td><div className={`w-2 h-2 rounded-full ${getStatusDot(cmd.status)}`} /></td>
-                          <td>
-                            <code className="text-xs font-mono text-neutral-700 dark:text-neutral-300">
-                              {cmd.command.length > 50 ? cmd.command.substring(0, 50) + '...' : cmd.command}
-                            </code>
-                          </td>
-                          <td className="text-sm text-neutral-600 dark:text-neutral-400">{cmd.assessment_name}</td>
-                          <td>
-                            <span className={`text-xs px-2 py-0.5 rounded ${cmd.status === 'executed' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' :
-                              cmd.status === 'rejected' ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300' :
-                                cmd.status === 'timeout' ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300' :
-                                  'bg-neutral-100 text-neutral-600'
-                              }`}>
-                              {getStatusLabel(cmd.status)}
-                            </span>
-                          </td>
-                          <td className="text-xs text-neutral-500">{formatTime(cmd.resolved_at)}</td>
-                        </tr>
+                        <Fragment key={cmd.id}>
+                          <tr
+                            className="cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800/50"
+                            onClick={() => setExpandedHistoryId(expandedHistoryId === cmd.id ? null : cmd.id)}
+                          >
+                            <td><div className={`w-2 h-2 rounded-full ${getStatusDot(cmd.status)}`} /></td>
+                            <td>
+                              <code className="text-xs font-mono text-neutral-700 dark:text-neutral-300">
+                                {getCommandPreview(cmd.command)}
+                              </code>
+                            </td>
+                            <td className="text-sm text-neutral-600 dark:text-neutral-400">{cmd.assessment_name}</td>
+                            <td>
+                              <span className={`text-xs px-2 py-0.5 rounded ${cmd.status === 'executed' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' :
+                                cmd.status === 'rejected' ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300' :
+                                  cmd.status === 'timeout' ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300' :
+                                    'bg-neutral-100 text-neutral-600'
+                                }`}>
+                                {getStatusLabel(cmd.status)}
+                              </span>
+                            </td>
+                            <td className="text-xs text-neutral-500">{formatTime(cmd.resolved_at)}</td>
+                          </tr>
+                          {expandedHistoryId === cmd.id && (
+                            <tr>
+                              <td colSpan="5" className="p-0">
+                                <div className="px-4 py-3 bg-neutral-50 dark:bg-neutral-800/50 border-t border-neutral-100 dark:border-neutral-700">
+                                  <span className="text-xs font-medium text-neutral-400 uppercase mb-1 block">Full Command</span>
+                                  <pre className="text-xs font-mono text-neutral-800 dark:text-neutral-200 bg-neutral-900 dark:bg-black p-3 rounded whitespace-pre-wrap break-all max-h-64 overflow-auto">
+                                    {cmd.command}
+                                  </pre>
+                                  {cmd.rejection_reason && (
+                                    <div className="mt-2 text-xs text-red-600 dark:text-red-400">
+                                      <span className="font-medium">Reason: </span>{cmd.rejection_reason}
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </Fragment>
                       ))}
                     </tbody>
                   </table>
