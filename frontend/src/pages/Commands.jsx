@@ -48,6 +48,7 @@ const Commands = () => {
   const [filterKeywords, setFilterKeywords] = useState([]);
   const [newKeyword, setNewKeyword] = useState('');
   const [savingMode, setSavingMode] = useState(false);
+  const [httpMethodRules, setHttpMethodRules] = useState({});
 
   // Approval state
   const [processingId, setProcessingId] = useState(null);
@@ -131,6 +132,7 @@ const Commands = () => {
       const settings = await commandSettingsService.getCommandSettings();
       setExecutionMode(settings.execution_mode || 'open');
       setFilterKeywords(settings.filter_keywords || []);
+      setHttpMethodRules(settings.http_method_rules || {});
     } catch (error) {
       // console.error('Failed to load settings:', error);
     }
@@ -279,6 +281,18 @@ const Commands = () => {
       setFilterKeywords(result.filter_keywords);
     } catch (error) {
       console.error('Failed to remove keyword:', error);
+    }
+  };
+
+  const handleHttpMethodRuleChange = async (method, action) => {
+    const updated = { ...httpMethodRules, [method]: action };
+    // Remove 'inherit' entries to keep the stored object clean
+    if (action === 'inherit') delete updated[method];
+    try {
+      const result = await commandSettingsService.updateHttpMethodRules(updated);
+      setHttpMethodRules(result.http_method_rules || {});
+    } catch (error) {
+      console.error('Failed to update HTTP method rule:', error);
     }
   };
 
@@ -689,6 +703,35 @@ const Commands = () => {
               </div>
             </div>
           )}
+
+          {/* HTTP Method Rules */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="text-xs text-neutral-500">HTTP method rules:</span>
+            {['GET', 'POST', 'PUT', 'DELETE', 'PATCH'].map((method) => {
+              const action = httpMethodRules[method] || 'inherit';
+              return (
+                <div key={method} className="inline-flex items-center border border-neutral-200 dark:border-neutral-700 rounded overflow-hidden text-xs">
+                  <span className="px-2 py-1 bg-neutral-50 dark:bg-neutral-800 font-mono text-neutral-700 dark:text-neutral-300 border-r border-neutral-200 dark:border-neutral-700">{method}</span>
+                  {['auto_approve', 'inherit', 'require_approval'].map((opt) => (
+                    <button
+                      key={opt}
+                      onClick={() => handleHttpMethodRuleChange(method, opt)}
+                      className={`px-2 py-1 transition-colors ${action === opt
+                        ? opt === 'auto_approve'
+                          ? 'bg-green-600 text-white'
+                          : opt === 'require_approval'
+                            ? 'bg-amber-500 text-white'
+                            : 'bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900'
+                        : 'text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800'
+                      }`}
+                    >
+                      {opt === 'auto_approve' ? 'allow' : opt === 'require_approval' ? 'ask' : 'mode'}
+                    </button>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
 
           {/* Approval Sub-tabs */}
           <div className="flex items-center gap-4 border-b border-neutral-200 dark:border-neutral-700">

@@ -749,7 +749,7 @@ async def _handle_execute(arguments: dict, mcp_service) -> List[TextContent]:
         )
         mode_response.raise_for_status()
         settings = mode_response.json()
-        
+
         execution_mode = settings.get("execution_mode", "open")
         filter_keywords = settings.get("filter_keywords", [])
     except Exception as e:
@@ -1178,22 +1178,33 @@ async def _handle_http_request(arguments: dict, mcp_service) -> List[TextContent
         cmd_settings = mode_response.json()
         execution_mode = cmd_settings.get("execution_mode", "open")
         filter_keywords = cmd_settings.get("filter_keywords", [])
+        http_method_rules = cmd_settings.get("http_method_rules", {})
     except Exception:
         execution_mode = "open"
         filter_keywords = []
+        http_method_rules = {}
 
     # ========== DETERMINE IF APPROVAL REQUIRED ==========
     requires_approval = False
     matched_keywords = []
+    target_lower = f"{method} {url}".lower()
 
-    if execution_mode == "closed":
+    # HTTP method rule takes priority over global mode
+    method_action = http_method_rules.get(method, "inherit")
+    if method_action == "auto_approve":
+        requires_approval = False
+    elif method_action == "require_approval":
         requires_approval = True
-    elif execution_mode == "filter":
-        # Keyword check on the URL and method
-        target_text = f"{method} {url}".lower()
-        matched_keywords = [kw for kw in filter_keywords if kw.lower() in target_text]
-        if matched_keywords:
+        matched_keywords = [f"HTTP {method}"]
+    else:
+        # "inherit" — use global execution mode logic
+        if execution_mode == "closed":
             requires_approval = True
+        elif execution_mode == "filter":
+            # Keyword check on the URL and method
+            matched_keywords = [kw for kw in filter_keywords if kw.lower() in target_lower]
+            if matched_keywords:
+                requires_approval = True
 
     # ========== APPROVAL FLOW ==========
     if requires_approval:
