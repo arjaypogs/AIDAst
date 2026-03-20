@@ -47,6 +47,15 @@ async def handle_tool_call(name: str, arguments: dict, mcp_service) -> List[Text
         if name == "load_assessment":
             return await _handle_load_assessment(arguments, mcp_service)
 
+        elif name == "create_assessment":
+            return await _handle_create_assessment(arguments, mcp_service)
+
+        elif name == "list_assessments":
+            return await _handle_list_assessments(arguments, mcp_service)
+
+        elif name == "list_containers":
+            return await _handle_list_containers(arguments, mcp_service)
+
         elif name == "update_phase":
             return await _handle_update_phase(arguments, mcp_service)
         # ========== Cards Management (unified) ==========
@@ -409,6 +418,149 @@ async def _handle_load_assessment(arguments: dict, mcp_service) -> List[TextCont
     response += "\nReady to begin assessment work!"
 
     return [TextContent(type="text", text=response)]
+
+
+async def _handle_create_assessment(arguments: dict, mcp_service) -> List[TextContent]:
+    """Handle create_assessment - Create a new assessment and auto-load it"""
+    name = arguments.get("name", "").strip()
+    if not name:
+        return [TextContent(type="text", text="Error: Assessment name is required.")]
+
+    # Build the creation payload
+    payload = {"name": name}
+
+    optional_fields = [
+        "client_name", "scope", "limitations", "objectives",
+        "target_domains", "ip_scopes", "credentials", "access_info",
+        "category", "environment", "environment_notes",
+        "start_date", "end_date"
+    ]
+    for field in optional_fields:
+        value = arguments.get(field)
+        if value is not None:
+            payload[field] = value
+
+    try:
+        response = await mcp_service.http_client.post(
+            f"{mcp_service.backend_url}/assessments",
+            json=payload
+        )
+
+        if response.status_code == 400:
+            error_detail = response.json().get("detail", "Bad request")
+            return [TextContent(type="text", text=f"Error: {error_detail}")]
+
+        response.raise_for_status()
+        assessment = response.json()
+
+        # Auto-load: set current assessment context
+        mcp_service.current_assessment_id = assessment["id"]
+        mcp_service.current_assessment_name = assessment["name"]
+
+        # Format success response
+        result = f"**Assessment Created and Loaded: {assessment['name']}**\n\n"
+        result += f"- **ID:** {assessment['id']}\n"
+        result += f"- **Status:** {assessment.get('status', 'active')}\n"
+        if assessment.get("category"):
+            result += f"- **Category:** {assessment['category']}\n"
+        result += f"- **Environment:** {assessment.get('environment', 'non_specifie')}\n"
+        if assessment.get("container_name"):
+            result += f"- **Container:** {assessment['container_name']}\n"
+        if assessment.get("workspace_path"):
+            result += f"- **Workspace:** `{assessment['workspace_path']}`\n"
+        if assessment.get("scope"):
+            result += f"- **Scope:** {assessment['scope']}\n"
+        if assessment.get("target_domains"):
+            result += f"- **Target Domains:** {', '.join(assessment['target_domains'])}\n"
+        if assessment.get("ip_scopes"):
+            result += f"- **IP Scopes:** {', '.join(assessment['ip_scopes'])}\n"
+        if assessment.get("limitations"):
+            result += f"- **Limitations:** {assessment['limitations']}\n"
+        if assessment.get("objectives"):
+            result += f"- **Objectives:** {assessment['objectives']}\n"
+        if assessment.get("client_name"):
+            result += f"- **Client:** {assessment['client_name']}\n"
+
+        result += "\nAssessment is now active. You can start the pentesting workflow."
+        return [TextContent(type="text", text=result)]
+
+    except Exception as e:
+        return [TextContent(type="text", text=f"Error creating assessment: {str(e)}")]
+
+
+async def _handle_list_assessments(arguments: dict, mcp_service) -> List[TextContent]:
+    """Handle list_assessments - List existing assessments"""
+    try:
+        params = {}
+        status_filter = arguments.get("status")
+        if status_filter:
+            params["status"] = status_filter
+        limit = arguments.get("limit", 50)
+        params["limit"] = limit
+
+        response = await mcp_service.http_client.get(
+            f"{mcp_service.backend_url}/assessments",
+            params=params
+        )
+        response.raise_for_status()
+        assessments = response.json()
+
+        if not assessments:
+            filter_msg = f" with status '{status_filter}'" if status_filter else ""
+            return [TextContent(type="text", text=f"No assessments found{filter_msg}.")]
+
+        result = f"**Assessments ({len(assessments)})**\n\n"
+        for a in assessments:
+            status_icon = {"active": "●", "completed": "✓", "archived": "○"}.get(a.get("status", ""), "?")
+            result += f"- {status_icon} **{a['name']}**"
+            if a.get("category"):
+                result += f" [{a['category']}]"
+            result += f" — {a.get('status', 'unknown')}"
+            if a.get("client_name"):
+                result += f" | Client: {a['client_name']}"
+            result += "\n"
+
+        return [TextContent(type="text", text=result)]
+
+    except Exception as e:
+        return [TextContent(type="text", text=f"Error listing assessments: {str(e)}")]
+
+
+async def _handle_list_containers(arguments: dict, mcp_service) -> List[TextContent]:
+    """Handle list_containers - List available pentesting containers"""
+    try:
+        response = await mcp_service.http_client.get(
+            f"{mcp_service.backend_url}/containers"
+        )
+        response.raise_for_status()
+        data = response.json()
+
+        # Handle both list and dict responses
+        containers = data if isinstance(data, list) else data.get("containers", [])
+        current = data.get("current", "") if isinstance(data, dict) else ""
+
+        if not containers:
+            return [TextContent(type="text", text="No pentesting containers found. Make sure a container is running (aida-pentest or Exegol).")]
+
+        result = f"**Available Containers ({len(containers)})**\n\n"
+        for c in containers:
+            name = c.get("name", "unknown")
+            status_str = c.get("status", "unknown")
+            is_running = "running" in status_str.lower()
+            is_current = name == current
+            status_icon = "🟢" if is_running else "⚫"
+            result += f"- {status_icon} **{name}**"
+            if is_current:
+                result += " *(active)*"
+            result += f" — {status_str}"
+            if c.get("image"):
+                result += f" | Image: {c['image']}"
+            result += "\n"
+
+        return [TextContent(type="text", text=result)]
+
+    except Exception as e:
+        return [TextContent(type="text", text=f"Error listing containers: {str(e)}")]
 
 
 async def _handle_update_phase(arguments: dict, mcp_service) -> List[TextContent]:

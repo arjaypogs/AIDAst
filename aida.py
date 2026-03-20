@@ -445,44 +445,45 @@ def main(assessment, model, permission_mode, preprompt, base_url, api_key, no_mc
                 
                 assessments = response.json()
                 
-                if not assessments:
-                    console.print("[yellow]No assessments found![/yellow]\n")
-                    console.print("Create your first assessment:")
-                    console.print("  → Open [link=http://localhost:5173]http://localhost:5173[/link]")
-                    console.print('  → Click "New Assessment"\n')
-                    sys.exit(1)
-                
                 # Display selection menu
                 console.print("[bold]Select an assessment:[/bold]\n")
-                
+
                 table = Table(show_header=False, box=None, padding=(0, 2))
                 table.add_column(style="cyan bold", justify="right", width=4)
                 table.add_column()
                 table.add_column(style="dim", no_wrap=True)
-                
-                for i, a in enumerate(assessments, 1):
-                    container = a.get('container_name', 'N/A')
-                    table.add_row(f"{i}.", a['name'], f"({container})")
-                
+
+                if assessments:
+                    for i, a in enumerate(assessments, 1):
+                        container = a.get('container_name', 'N/A')
+                        table.add_row(f"{i}.", a['name'], f"({container})")
+                else:
+                    console.print("[dim]No assessments yet — the AI can create one for you.[/dim]\n")
+
                 console.print(table)
                 console.print()
-                
+
                 # Get user input
                 try:
                     choice = console.input("[bold]Enter number (or 'q' to quit): [/bold]")
-                    
+
                     if choice.lower() == 'q':
                         console.print("\nCancelled.\n")
                         sys.exit(0)
-                    
-                    idx = int(choice) - 1
-                    if 0 <= idx < len(assessments):
-                        assessment = assessments[idx]['name']
-                        console.print(f"\n[green]✓[/green] Selected: [cyan]{assessment}[/cyan]\n")
+
+                    # Empty input or "0" = skip (no assessment, AI can create one)
+                    if choice == '' or choice == '0':
+                        assessment = None
+                        console.print("\n[green]✓[/green] [dim]No assessment selected — AI can create one with create_assessment()[/dim]\n")
                     else:
-                        console.print("\n[red]Invalid selection[/red]\n")
-                        sys.exit(1)
-                        
+                        idx = int(choice) - 1
+                        if 0 <= idx < len(assessments):
+                            assessment = assessments[idx]['name']
+                            console.print(f"\n[green]✓[/green] Selected: [cyan]{assessment}[/cyan]\n")
+                        else:
+                            console.print("\n[red]Invalid selection[/red]\n")
+                            sys.exit(1)
+
                 except (ValueError, KeyboardInterrupt):
                     console.print("\n\nCancelled.\n")
                     sys.exit(0)
