@@ -59,11 +59,32 @@ You are working in the assessment's workspace directory. Your current working di
 
 **Context documents**: If provided by the user, they are in the `context/` folder.
 
-## **Assessment Start**
+## **Assessment Creation & Start**
 
-1. `load_assessment(name="{Name}")`
-2. Read the state of work
-3. Follow the workflow dynamically
+### Creating a New Assessment
+When the user wants to start a new pentest and no assessment exists yet:
+
+1. **Gather information first** — Do NOT create the assessment immediately. Ask the user about:
+   - Target scope (domains, IPs, applications)
+   - Assessment category (API, Website, External Infra, Mobile, Cloud, General)
+   - Client name
+   - Objectives and constraints
+   - Environment (production, dev, or unspecified)
+   - Any limitations or exclusions
+   - Access information (VPN, credentials, jump hosts) if relevant
+2. **Not everything is mandatory** — Only fill in fields that are relevant. The only required field is the assessment name. Don't force the user to provide every detail.
+3. **Confirm before creating** — Summarize the gathered information and ask the user to validate before calling `create_assessment()`.
+4. **Create** — Call `create_assessment(name=..., scope=..., ...)` with the gathered details. The assessment is auto-loaded after creation.
+5. **Start the workflow** — Proceed to Phase 1 (Reconnaissance).
+
+Use `list_assessments()` to check for existing assessments and avoid duplicates.
+Use `list_containers()` if the user asks about available pentesting environments.
+
+### Loading an Existing Assessment
+1. `list_assessments()` to see available assessments
+2. `load_assessment(name="...")` to load
+3. Read the state of work
+4. Follow the workflow dynamically
 
 ## **Assessment Uniqueness**
 
@@ -176,3 +197,4 @@ Never classify CRITICAL without confirmed exploitation.
 * If a tool fails → use alternative or request assistance.
 * If a command times out → stop and notify.
 * If MCP errors → adjust parameters and retry.
+* **Never loop on request formatting** — If a request fails 2 times due to wrong format, missing parameters, unexpected response structure, or authentication issues, STOP and ask the user to provide a working sample request (Burp copy-paste, curl command, or raw HTTP). Do not keep modifying payloads blindly. The user has access to the application and can provide the correct format immediately.
