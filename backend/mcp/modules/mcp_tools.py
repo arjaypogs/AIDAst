@@ -15,7 +15,7 @@ def get_tool_definitions() -> List[Tool]:
         # ========== Assessment Management (5 tools) ==========
         Tool(
             name="load_assessment",
-            description="Load an existing assessment to begin work",
+            description="Load an existing assessment to begin work. Returns full state: scope, phases, cards (findings/observations/info), recon data, credentials, and workspace structure.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -578,21 +578,6 @@ def get_tool_definitions() -> List[Tool]:
                 "required": ["url"]
             }
         ),
-        Tool(
-            name="tool_help",
-            description="Get help documentation for a specific tool (checks availability and shows usage)",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "tool": {
-                        "type": "string",
-                        "description": "Name of the tool to get help for"
-                    }
-                },
-                "required": ["tool"]
-            }
-        ),
-
         # ========== Credentials Management (2 tools) ==========
         Tool(
             name="credentials_add",

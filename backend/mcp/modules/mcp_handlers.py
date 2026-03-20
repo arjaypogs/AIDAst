@@ -105,9 +105,6 @@ async def handle_tool_call(name: str, arguments: dict, mcp_service) -> List[Text
         elif name == "tech_detection":
             return await _handle_tech_detection(arguments, mcp_service)
 
-        elif name == "tool_help":
-            return await _handle_tool_help(arguments, mcp_service)
-
         # ========== Credentials Management ==========
 
         elif name == "credentials_add":
@@ -1641,43 +1638,6 @@ async def _handle_tech_detection(arguments: dict, mcp_service) -> List[TextConte
             response += f"```\n{cmd_result['output']}\n```\n\n"
         elif cmd_result["error"]:
             response += f"Error with {cmd_result['command']}: {cmd_result['error']}\n\n"
-
-    return [TextContent(type="text", text=response)]
-
-
-async def _handle_tool_help(arguments: dict, mcp_service) -> List[TextContent]:
-    """Handle tool_help"""
-    if not mcp_service.current_container:
-        return [TextContent(type="text", text="No container selected.")]
-
-    tool = arguments["tool"]
-
-    # First check if tool is available
-    available = await mcp_service.check_tool_availability(tool)
-    if not available:
-        return [TextContent(type="text",
-                            text=f"Tool `{tool}` not available in container `{mcp_service.current_container}`")]
-
-    response = f"**Help for `{tool}`:**\n\n"
-
-    # Try different help options
-    help_commands = [f"{tool} -h", f"{tool} --help", f"{tool} help", f"man {tool}"]
-
-    for help_cmd in help_commands:
-        result = await mcp_service.execute_container_command(
-            mcp_service.current_container, help_cmd
-        )
-
-        if result["success"] and result.get("stdout"):
-            response += f"**Command:** `{help_cmd}`\n"
-            response += f"```\n{result['stdout']}\n```"
-            break
-        elif result.get("stderr") and "usage" in result["stderr"].lower():
-            response += f"**Command:** `{help_cmd}`\n"
-            response += f"```\n{result['stderr']}\n```"
-            break
-    else:
-        response += f"No help documentation found for `{tool}`"
 
     return [TextContent(type="text", text=response)]
 
