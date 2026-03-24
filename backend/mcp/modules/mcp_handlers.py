@@ -325,7 +325,7 @@ async def _handle_load_assessment(arguments: dict, mcp_service) -> List[TextCont
                 continue
             displayed.add(dtype)
             label = dtype.capitalize() + 's'
-            names = [i.get('name', '') for i in items]
+            names = [str(i.get('name', '') or '') for i in items]
             response += f"**{label} ({len(names)}):** {', '.join(names)}\n"
 
         # Any extra/custom types not in the predefined list
@@ -333,7 +333,7 @@ async def _handle_load_assessment(arguments: dict, mcp_service) -> List[TextCont
             if dtype in displayed:
                 continue
             label = dtype.replace('_', ' ').capitalize() + 's'
-            names = [i.get('name', '') for i in items]
+            names = [str(i.get('name', '') or '') for i in items]
             response += f"**{label} ({len(names)}):** {', '.join(names)}\n"
 
     # Add recent command history
@@ -470,9 +470,11 @@ async def _handle_create_assessment(arguments: dict, mcp_service) -> List[TextCo
         if assessment.get("scope"):
             result += f"- **Scope:** {assessment['scope']}\n"
         if assessment.get("target_domains"):
-            result += f"- **Target Domains:** {', '.join(assessment['target_domains'])}\n"
+            domains = assessment['target_domains']
+            result += f"- **Target Domains:** {', '.join(domains) if isinstance(domains, list) else str(domains)}\n"
         if assessment.get("ip_scopes"):
-            result += f"- **IP Scopes:** {', '.join(assessment['ip_scopes'])}\n"
+            scopes = assessment['ip_scopes']
+            result += f"- **IP Scopes:** {', '.join(scopes) if isinstance(scopes, list) else str(scopes)}\n"
         if assessment.get("limitations"):
             result += f"- **Limitations:** {assessment['limitations']}\n"
         if assessment.get("objectives"):
