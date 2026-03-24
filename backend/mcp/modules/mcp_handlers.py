@@ -163,8 +163,10 @@ async def _handle_load_assessment(arguments: dict, mcp_service) -> List[TextCont
     response += f"**Limitations:** {assessment_data.get('limitations', 'N/A')}\n\n"
 
     response += "## Basic Information\n"
-    response += f"**Target Domains:** {', '.join(assessment_data.get('target_domains', [])) or 'N/A'}\n"
-    response += f"**IP Scopes:** {', '.join(assessment_data.get('ip_scopes', [])) or 'N/A'}\n\n"
+    target_domains = assessment_data.get('target_domains') or []
+    ip_scopes = assessment_data.get('ip_scopes') or []
+    response += f"**Target Domains:** {', '.join(target_domains) if isinstance(target_domains, list) else str(target_domains) or 'N/A'}\n"
+    response += f"**IP Scopes:** {', '.join(ip_scopes) if isinstance(ip_scopes, list) else str(ip_scopes) or 'N/A'}\n\n"
 
     response += f"**Workspace:** `{assessment_data.get('workspace_path', 'Not created')}`\n\n"
     
