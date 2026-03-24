@@ -610,11 +610,10 @@ The assessment workspace is ready. Use your standard tools to work with files an
         # Set API env vars
         env = os.environ.copy()
 
-        # 🔧 FIX: Force disable prompt caching for Vertex AI compatibility
-        env["DISABLE_PROMPT_CACHING"] = "1"
-
         if base_url:
             env["ANTHROPIC_BASE_URL"] = base_url
+            # Disable prompt caching for external API proxies (Vertex AI, etc.)
+            env["DISABLE_PROMPT_CACHING"] = "1"
         if api_key:
             env["ANTHROPIC_AUTH_TOKEN"] = api_key
 
