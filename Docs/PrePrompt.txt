@@ -55,7 +55,6 @@ When the user wants to start a new pentest and no assessment exists yet:
 5. **Start the workflow** — Proceed to Phase 1 (Reconnaissance).
 
 Use `list_assessments()` to check for existing assessments and avoid duplicates.
-Use `list_containers()` if the user asks about available pentesting environments.
 
 ### Loading an Existing Assessment
 1. `list_assessments()` to see available assessments

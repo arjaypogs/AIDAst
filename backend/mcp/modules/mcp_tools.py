@@ -122,14 +122,6 @@ def get_tool_definitions() -> List[Tool]:
             }
         ),
         Tool(
-            name="list_containers",
-            description="List available pentesting containers with their status. No assessment needs to be loaded.",
-            inputSchema={
-                "type": "object",
-                "properties": {}
-            }
-        ),
-        Tool(
             name="update_phase",
             description="Update content of a phase section (free text, markdown supported)",
             inputSchema={
