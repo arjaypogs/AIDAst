@@ -99,6 +99,8 @@ DEFAULT_MODEL = "claude-sonnet-4-5"
 DEFAULT_PERMISSION = "default"
 DEFAULT_BACKEND = "http://localhost:8000/api"
 
+CONTAINER_PREFS_FILE = AIDA_CONFIG_DIR / "container-preference"
+
 # CLI types
 CLIType = Literal["claude", "kimi"]
 
@@ -353,13 +355,14 @@ def resolve_workspace(assessment_name: str, backend_url: str) -> Optional[dict]:
 def show_assessment_not_found(assessment_name: str, backend_url: str):
     """Display detailed error when assessment workspace cannot be resolved"""
     console.print(f"\n[red]✗ Cannot load assessment '{assessment_name}'[/red]\n")
-    
-    # Check if Exegol is installed
-    if not check_exegol_installed():
-        console.print("[yellow]⚠ Exegol container not detected on this system[/yellow]\n")
-        console.print("[bold]AIDA requires Exegol to execute pentesting commands.[/bold]")
-        console.print("Without Exegol, the AI cannot run security tools.\n")
-    
+
+    container_pref = CONTAINER_PREFS_FILE.read_text().strip() if CONTAINER_PREFS_FILE.exists() else "aida-pentest"
+
+    if container_pref == "exegol" and not check_exegol_installed():
+        console.print("[yellow]⚠ No Exegol container detected on this system[/yellow]\n")
+        console.print("[bold]Start an Exegol container before using AIDA:[/bold]")
+        console.print("  [cyan]exegol start <name>[/cyan]\n")
+
     sys.exit(1)
 
 
