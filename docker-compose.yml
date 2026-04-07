@@ -35,7 +35,8 @@ services:
       POSTGRES_HOST: ${DB_HOST:-postgres}
       POSTGRES_DB: ${DB_NAME:-aida_assessments}
     ports:
-      - "8000:8000"
+      # Bind to localhost only — the API must not be reachable from the LAN.
+      - "127.0.0.1:8000:8000"
     volumes:
       # Mount source code for hot reload (exclude venv to avoid conflicts)
       # :z flag enables SELinux compatibility (RHEL/Fedora)
@@ -69,7 +70,8 @@ services:
       # Frontend talks to backend via localhost (browser runs on host)
       VITE_API_URL: http://localhost:8000/api
     ports:
-      - "5173:5173"
+      # Bind to localhost only — the dev server must not be reachable from the LAN.
+      - "127.0.0.1:5173:5173"
     volumes:
       # Mount source code for hot reload (exclude node_modules to avoid conflicts)
       # :z flag enables SELinux compatibility (RHEL/Fedora)
