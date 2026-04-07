@@ -15,18 +15,18 @@ from pydantic import BaseModel, Field
 from database import get_db
 from models.user import User
 
-# Configuration. SECRET_KEY must be present in the environment by the time
-# this module is imported — bootstrap_secrets.ensure_secret_key() in main.py
-# guarantees that on first launch by generating a key and persisting it to
-# backend/.env. Failing loudly here prevents anyone from accidentally signing
-# JWTs with a hardcoded default.
+# Configuration. SECRET_KEY must be present at module-import time. If the
+# environment doesn't carry it (e.g. when this module is imported from a
+# `docker compose exec` ad-hoc shell), invoke the bootstrap which loads or
+# generates a persistent key. The bootstrap is idempotent and safe to call
+# from any context.
 SECRET_KEY = os.getenv("SECRET_KEY")
 if not SECRET_KEY:
-    raise RuntimeError(
-        "SECRET_KEY is not set. The application must be started via main.py "
-        "(which calls bootstrap_secrets.ensure_secret_key) or with the env "
-        "variable explicitly provided."
-    )
+    from bootstrap_secrets import ensure_secret_key
+    ensure_secret_key()
+    SECRET_KEY = os.getenv("SECRET_KEY")
+    if not SECRET_KEY:
+        raise RuntimeError("SECRET_KEY could not be loaded or generated")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "1440"))  # 24 hours
 
