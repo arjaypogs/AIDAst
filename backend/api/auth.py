@@ -2,19 +2,19 @@
 Authentication API endpoints
 """
 from datetime import datetime, timezone
+from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from pydantic import BaseModel, Field
-
-from database import get_db
-from models.user import User
 from auth import (
-    UserLogin, UserResponse, TokenResponse, PasswordChangeRequest,
-    hash_password, verify_password, create_access_token, get_current_user,
+    PasswordChangeRequest, TokenResponse, UserLogin, UserResponse,
+    create_access_token, get_current_user, hash_password, verify_password,
 )
+from database import get_db
 from middleware.rate_limit import limiter
+from models.user import User
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -22,7 +22,7 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 class SetupRequest(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
     password: str = Field(..., min_length=12)
-    email: str | None = None
+    email: Optional[str] = None
 
 
 @router.get("/setup-status")
