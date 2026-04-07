@@ -1,6 +1,11 @@
 """
 Main FastAPI application
 """
+# Provision the JWT signing key BEFORE anything else imports auth/config so
+# the application can never run with the hardcoded legacy default.
+from bootstrap_secrets import ensure_secret_key
+ensure_secret_key()
+
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
