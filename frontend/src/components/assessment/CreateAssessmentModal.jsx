@@ -173,20 +173,6 @@ const CreateAssessmentModal = ({ onClose, onSuccess }) => {
                           <ChevronRight className="w-4 h-4 text-neutral-300 group-hover:text-primary-500" />
                         </div>
                         <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1 line-clamp-2">{tpl.description}</p>
-                        {tpl.suggested_tools?.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            {tpl.suggested_tools.slice(0, 4).map(tool => (
-                              <span key={tool} className="px-1.5 py-0.5 text-[9px] font-mono bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-400 rounded">
-                                {tool}
-                              </span>
-                            ))}
-                            {tpl.suggested_tools.length > 4 && (
-                              <span className="px-1.5 py-0.5 text-[9px] text-neutral-400">
-                                +{tpl.suggested_tools.length - 4}
-                              </span>
-                            )}
-                          </div>
-                        )}
                       </div>
                     </button>
                   );
