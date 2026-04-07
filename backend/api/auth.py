@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from auth import (
     PasswordChangeRequest, TokenResponse, UserLogin, UserResponse,
-    create_access_token, get_current_user, hash_password, verify_password,
+    create_access_token, create_api_token, get_current_user, hash_password, verify_password,
 )
 from database import get_db
 from middleware.rate_limit import limiter
@@ -104,6 +104,22 @@ def login(request: Request, data: UserLogin, db: Session = Depends(get_db)):
 def get_me(current_user: User = Depends(get_current_user)):
     """Get current authenticated user info."""
     return UserResponse.model_validate(current_user)
+
+
+@router.post("/api-token")
+@limiter.limit("10/minute")
+def issue_api_token(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+):
+    """Issue a long-lived API token (1 year) for CLI/MCP use.
+
+    Requires an existing valid session. The returned token uses the same
+    JWT format as access tokens and is validated by the standard auth
+    dependency — no extra infrastructure needed.
+    """
+    token = create_api_token(current_user.id, current_user.username)
+    return {"api_token": token}
 
 
 @router.post("/change-password", response_model=UserResponse)

@@ -59,6 +59,7 @@ stop-legacy.sh
 /.aida/mcp-config.json
 /.aida/container-preference
 /.aida/session
+/.aida/api-key
 
 # Docker
 docker-compose.override.yml

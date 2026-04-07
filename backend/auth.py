@@ -94,6 +94,22 @@ def create_access_token(user_id: int, username: str) -> str:
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
 
+def create_api_token(user_id: int, username: str) -> str:
+    """Issue a long-lived token (1 year) for CLI/MCP use.
+
+    Same JWT format as access tokens so the existing get_current_user
+    dependency validates it without any changes.
+    """
+    expire = datetime.now(timezone.utc) + timedelta(days=365)
+    payload = {
+        "sub": str(user_id),
+        "username": username,
+        "exp": expire,
+        "type": "api",
+    }
+    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+
+
 def decode_token(token: str) -> dict:
     try:
         return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])

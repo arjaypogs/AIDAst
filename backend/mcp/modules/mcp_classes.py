@@ -25,11 +25,30 @@ log = logger  # Alias for backward compatibility
 class AidaMCPService:
     """AIDA MCP service with backend integration and container management"""
 
+    @staticmethod
+    def _read_session_file() -> Optional[str]:
+        """Read cached token from .aida/api-key or .aida/session.
+
+        Checks api-key first (long-lived, 1 year) then falls back to
+        the short-lived session token written by aida.py.
+        """
+        aida_root = Path(__file__).resolve().parents[4]
+        for filename in ("api-key", "session"):
+            try:
+                path = aida_root / ".aida" / filename
+                if path.exists():
+                    token = path.read_text().strip()
+                    if token:
+                        return token
+            except OSError:
+                pass
+        return None
+
     def __init__(self, backend_url: str = None):
         # Load backend URL from environment or use default
         import os
         self.backend_url = backend_url or os.getenv("BACKEND_API_URL", "http://localhost:8000/api")
-        self.token: Optional[str] = os.getenv("AIDA_TOKEN")
+        self.token: Optional[str] = os.getenv("AIDA_TOKEN") or self._read_session_file()
         self.current_assessment_id: Optional[int] = None
         self.current_assessment_name: Optional[str] = None
         self.http_client: Optional[httpx.AsyncClient] = None

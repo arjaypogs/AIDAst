@@ -91,6 +91,7 @@ PREPROMPT_FILE = AIDA_ROOT / "Docs" / "PrePrompt.txt"
 MCP_SERVER_PATH = AIDA_ROOT / "backend" / "mcp" / "aida_mcp_server.py"
 MCP_CONFIG_FILE = AIDA_CONFIG_DIR / "mcp-config.json"
 SESSION_FILE = AIDA_CONFIG_DIR / "session"
+API_KEY_FILE = AIDA_CONFIG_DIR / "api-key"
 
 # Kimi-specific config files
 KIMI_AGENT_FILE = AIDA_CONFIG_DIR / "kimi-agent.yaml"
@@ -293,25 +294,38 @@ def detect_cli() -> CLIType:
     return None
 
 
-def _load_session() -> Optional[str]:
-    """Read cached token from .aida/session (600 permissions)."""
-    if SESSION_FILE.exists():
+def _read_file_token(path: Path) -> Optional[str]:
+    """Read a token from a chmod-600 file, return None if missing/empty."""
+    if path.exists():
         try:
-            return SESSION_FILE.read_text().strip() or None
+            return path.read_text().strip() or None
         except OSError:
             pass
     return None
 
 
-def _save_session(token: str) -> None:
-    """Persist token to .aida/session with owner-only permissions."""
+def _write_file_token(path: Path, token: str) -> None:
+    """Write token to path with owner-only permissions."""
     AIDA_CONFIG_DIR.mkdir(exist_ok=True)
-    SESSION_FILE.write_text(token)
-    SESSION_FILE.chmod(0o600)
+    path.write_text(token)
+    path.chmod(0o600)
+
+
+def _validate_token(backend_url: str, token: str) -> bool:
+    """Return True if token is accepted by /auth/me."""
+    try:
+        with httpx.Client(timeout=5.0) as client:
+            r = client.get(f"{backend_url}/auth/me",
+                           headers={"Authorization": f"Bearer {token}"})
+        return r.status_code == 200
+    except httpx.ConnectError:
+        console.print("[red]✗ Cannot reach backend — is it running?[/red]\n")
+        console.print("  → [cyan]docker-compose up -d[/cyan]\n")
+        sys.exit(1)
 
 
 def _do_login(backend_url: str) -> str:
-    """Prompt for credentials, call /auth/login, return token."""
+    """Prompt for credentials, call /auth/login, return short-lived token."""
     import getpass
     console.print("[bold]AIDA Backend Login[/bold]")
     username = console.input("  Username: ")
@@ -337,43 +351,66 @@ def _do_login(backend_url: str) -> str:
         sys.exit(1)
 
 
+def _fetch_api_key(backend_url: str, session_token: str) -> Optional[str]:
+    """Exchange a valid session token for a long-lived API key (1 year)."""
+    try:
+        with httpx.Client(timeout=10.0) as client:
+            r = client.post(
+                f"{backend_url}/auth/api-token",
+                headers={"Authorization": f"Bearer {session_token}"},
+            )
+        if r.status_code == 200:
+            return r.json().get("api_token")
+    except Exception:
+        pass
+    return None
+
+
 def authenticate(backend_url: str) -> str:
-    """Return a valid JWT token for backend API calls.
+    """Return a valid token for backend API calls.
 
     Priority:
       1. AIDA_TOKEN env var (CI / scripting)
-      2. .aida/session file (cached from previous login)
-      3. Interactive login prompt → token saved to .aida/session
-    On token expiry (401), the cached session is cleared and the user
-    is prompted to log in again.
+      2. .aida/api-key  — long-lived (1 year), never prompts once set
+      3. .aida/session  — 24h token from a previous login
+      4. Interactive login → issues api-key stored in .aida/api-key
     """
-    # 1. Env var override (non-interactive / CI)
+    # 1. Env var override (CI / scripting)
     token = os.getenv("AIDA_TOKEN")
     if token:
         return token
 
-    # 2. Cached session
-    token = _load_session()
+    # 2. Long-lived API key — valid for 1 year, silently reused
+    token = _read_file_token(API_KEY_FILE)
+    if token and _validate_token(backend_url, token):
+        return token
     if token:
-        # Quick validation — if the backend returns 401 the token expired
-        try:
-            with httpx.Client(timeout=5.0) as client:
-                r = client.get(f"{backend_url}/auth/me",
-                               headers={"Authorization": f"Bearer {token}"})
-            if r.status_code == 200:
-                return token
-            # Token expired or invalid — fall through to login
-            SESSION_FILE.unlink(missing_ok=True)
-        except httpx.ConnectError:
-            console.print("[red]✗ Cannot reach backend — is it running?[/red]\n")
-            console.print("  → [cyan]docker-compose up -d[/cyan]\n")
-            sys.exit(1)
+        API_KEY_FILE.unlink(missing_ok=True)  # expired, remove
 
-    # 3. Interactive login
-    token = _do_login(backend_url)
-    _save_session(token)
+    # 3. Short-lived session token from a previous login
+    token = _read_file_token(SESSION_FILE)
+    if token and _validate_token(backend_url, token):
+        # Upgrade to a long-lived API key while the session is still valid
+        api_key = _fetch_api_key(backend_url, token)
+        if api_key:
+            _write_file_token(API_KEY_FILE, api_key)
+            SESSION_FILE.unlink(missing_ok=True)
+            return api_key
+        return token
+    if token:
+        SESSION_FILE.unlink(missing_ok=True)
+
+    # 4. Interactive login — first time or after key revocation
+    session_token = _do_login(backend_url)
+    api_key = _fetch_api_key(backend_url, session_token)
+    if api_key:
+        _write_file_token(API_KEY_FILE, api_key)
+        console.print("[green]✓ Authenticated[/green]\n")
+        return api_key
+    # Fallback: api-token endpoint unavailable, cache the session token
+    _write_file_token(SESSION_FILE, session_token)
     console.print("[green]✓ Authenticated[/green]\n")
-    return token
+    return session_token
 
 
 def resolve_workspace(assessment_name: str, backend_url: str, token: str = "") -> Optional[dict]:
