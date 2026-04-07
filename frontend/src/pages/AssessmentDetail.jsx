@@ -60,6 +60,7 @@ const AssessmentDetail = () => {
   const [copiedCmd, setCopiedCmd] = useState(false);
   const [launchingAI, setLaunchingAI] = useState(false);
   const [launchResult, setLaunchResult] = useState(null);
+  const [showMcpNotice, setShowMcpNotice] = useState(false);
 
   // WebSocket connection for real-time updates
   const { subscribe, isConnected } = useWebSocket(id);
@@ -474,6 +475,10 @@ const AssessmentDetail = () => {
           <div className="relative">
             <button
               onClick={() => {
+                if (!localStorage.getItem('aida_mcp_notice_seen')) {
+                  setShowMcpNotice(true);
+                  return;
+                }
                 // Clear any stale result from a previous open so the popup
                 // always starts fresh — otherwise reopening after a success
                 // shows the old success banner with no launch button.
@@ -547,14 +552,6 @@ const AssessmentDetail = () => {
                           {copiedCmd ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3 text-neutral-400" />}
                         </button>
                       </div>
-                    </div>
-
-                    {/* External MCP clients notice */}
-                    <div className="mt-3 pt-3 border-t border-neutral-200 dark:border-neutral-700 flex items-start gap-1.5 text-[10px] text-neutral-500 dark:text-neutral-400">
-                      <Info className="w-3 h-3 mt-0.5 flex-shrink-0" />
-                      <span>
-                        <strong>External MCP clients</strong> (Claude Desktop, Cursor, etc.) require running <code className="font-mono">aida.py</code> once first to authenticate and cache the API key.
-                      </span>
                     </div>
 
                     <div className="mt-2 text-[10px] text-neutral-500 dark:text-neutral-400">
@@ -1040,6 +1037,58 @@ const AssessmentDetail = () => {
           assessmentId={parseInt(id)}
           onClose={() => setShowMarkdownModal(false)}
         />
+      )}
+
+      {/* First-time MCP notice modal */}
+      {showMcpNotice && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 dark:bg-black/70 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-strong max-w-md w-full mx-4 animate-slide-up">
+            <div className="px-6 pt-6 pb-4">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
+                  <Info className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+                </div>
+                <div>
+                  <h3 className="text-base font-semibold text-neutral-900 dark:text-neutral-100">Before you start</h3>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400">Authentication required for AI clients</p>
+                </div>
+              </div>
+
+              <div className="space-y-3 text-sm text-neutral-700 dark:text-neutral-300">
+                <p>
+                  To connect an AI client (Claude Desktop, Cursor, Gemini, etc.) via MCP, you need to run <code className="font-mono text-xs bg-neutral-100 dark:bg-neutral-700 px-1.5 py-0.5 rounded">aida.py</code> once from your terminal first.
+                </p>
+                <p>This authenticates against the backend and caches a long-lived API key — every subsequent launch is silent.</p>
+                <div className="bg-neutral-900 rounded-lg px-4 py-3 font-mono text-xs text-green-400">
+                  python3 aida.py
+                </div>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                  Using <strong className="text-neutral-600 dark:text-neutral-300">Claude Code or Kimi CLI</strong>? The launcher handles everything automatically — no extra step needed.
+                </p>
+              </div>
+            </div>
+
+            <div className="px-6 py-4 border-t border-neutral-200 dark:border-neutral-700 flex justify-end gap-3">
+              <button
+                onClick={() => setShowMcpNotice(false)}
+                className="btn btn-secondary btn-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  localStorage.setItem('aida_mcp_notice_seen', '1');
+                  setShowMcpNotice(false);
+                  setLaunchResult(null);
+                  setShowStartAI(true);
+                }}
+                className="btn btn-primary btn-sm"
+              >
+                Got it
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

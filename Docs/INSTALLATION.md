@@ -116,6 +116,8 @@ Now you need to hook up AIDA to your AI assistant via MCP.
 | **Gemini CLI** | Works | Manual MCP import (run `aida.py` once first) |
 | **Claude Desktop** | Works | Manual MCP import (run `aida.py` once first) |
 
+> **External MCP clients (Claude Desktop, Cursor, Gemini CLI, etc.)** require running `aida.py` once before connecting. This authenticates against the backend and stores a long-lived API key in `.aida/api-key`. Every subsequent connection reuses it silently — no further login needed.
+
 ---
 
 ## AIDA CLI — Claude Code & Kimi
