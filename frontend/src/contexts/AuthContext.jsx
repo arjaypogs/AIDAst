@@ -1,12 +1,11 @@
 /**
  * Authentication Context
- * Manages JWT auth state, auto-login, and logout
+ * Manages JWT auth state, login, password change, and logout.
  */
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import {
-  getStoredToken, getStoredUser, clearAuth,
-  login as apiLogin, register as apiRegister,
-  fetchAuthStatus,
+  getStoredToken, getStoredUser, clearAuth, storeUser,
+  login as apiLogin, fetchMe,
 } from '../services/authService';
 
 const AuthContext = createContext(null);
@@ -14,46 +13,50 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(getStoredUser);
   const [token, setToken] = useState(getStoredToken);
-  const [authRequired, setAuthRequired] = useState(null); // null = loading
   const [loading, setLoading] = useState(true);
+  const [backendUnreachable, setBackendUnreachable] = useState(false);
 
-  // Check if auth is required (any users exist in DB)
+  // On mount: if we have a token, validate it by fetching /auth/me.
+  // We never assume "no auth required" — auth is always required now.
   useEffect(() => {
-    fetchAuthStatus()
-      .then(({ auth_required }) => {
-        setAuthRequired(auth_required);
-        // If no auth required (no users), auto-pass
-        if (!auth_required) {
-          setLoading(false);
-          return;
-        }
-        // If auth required but we have token, validate it
-        if (auth_required && token) {
-          setLoading(false);
+    let cancelled = false;
+
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+
+    fetchMe()
+      .then((freshUser) => {
+        if (cancelled) return;
+        setUser(freshUser);
+        storeUser(freshUser);
+        setBackendUnreachable(false);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        // 401 → clear stale token and let the user re-login.
+        if (err?.response?.status === 401) {
+          clearAuth();
+          setToken(null);
+          setUser(null);
         } else {
-          setLoading(false);
+          // Network/5xx → don't bypass auth, surface the error instead.
+          setBackendUnreachable(true);
         }
       })
-      .catch(() => {
-        // Backend unreachable — skip auth
-        setAuthRequired(false);
-        setLoading(false);
+      .finally(() => {
+        if (!cancelled) setLoading(false);
       });
+
+    return () => { cancelled = true; };
   }, [token]);
 
   const login = useCallback(async (username, password) => {
     const result = await apiLogin(username, password);
     setToken(result.token);
     setUser(result.user);
-    setAuthRequired(true);
-    return result;
-  }, []);
-
-  const registerUser = useCallback(async (username, password, email) => {
-    const result = await apiRegister(username, password, email);
-    setToken(result.token);
-    setUser(result.user);
-    setAuthRequired(true);
+    setBackendUnreachable(false);
     return result;
   }, []);
 
@@ -63,14 +66,21 @@ export function AuthProvider({ children }) {
     setUser(null);
   }, []);
 
-  const isAuthenticated = !authRequired || !!token;
+  const refreshUser = useCallback((freshUser) => {
+    setUser(freshUser);
+    storeUser(freshUser);
+  }, []);
+
+  const isAuthenticated = !!token && !!user;
+  const mustChangePassword = !!user?.must_change_password;
 
   return (
     <AuthContext.Provider value={{
       user, token, loading,
-      authRequired,
       isAuthenticated,
-      login, register: registerUser, logout,
+      mustChangePassword,
+      backendUnreachable,
+      login, logout, refreshUser,
     }}>
       {children}
     </AuthContext.Provider>

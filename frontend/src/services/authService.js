@@ -20,6 +20,10 @@ export function storeAuth(token, user) {
   localStorage.setItem(USER_KEY, JSON.stringify(user));
 }
 
+export function storeUser(user) {
+  localStorage.setItem(USER_KEY, JSON.stringify(user));
+}
+
 export function clearAuth() {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
@@ -32,21 +36,16 @@ export async function login(username, password) {
   return { token: access_token, user };
 }
 
-export async function register(username, password, email) {
-  const body = { username, password };
-  if (email) body.email = email;
-  const res = await apiClient.post('/auth/register', body);
-  const { access_token, user } = res.data;
-  storeAuth(access_token, user);
-  return { token: access_token, user };
-}
-
 export async function fetchMe() {
   const res = await apiClient.get('/auth/me');
   return res.data;
 }
 
-export async function fetchAuthStatus() {
-  const res = await apiClient.get('/auth/status');
+export async function changePassword(currentPassword, newPassword) {
+  const res = await apiClient.post('/auth/change-password', {
+    current_password: currentPassword,
+    new_password: newPassword,
+  });
+  storeUser(res.data);
   return res.data;
 }

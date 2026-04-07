@@ -10,6 +10,7 @@ import AssessmentDetail from './pages/AssessmentDetail';
 import Commands from './pages/Commands';
 import Settings from './pages/Settings';
 import Login from './pages/Login';
+import ChangePassword from './pages/ChangePassword';
 import useCommandNotifications from './hooks/useCommandNotifications';
 import CommandApprovalToast from './components/common/CommandApprovalBanner';
 
@@ -20,7 +21,7 @@ function NotificationHandler() {
 }
 
 function AuthGate({ children }) {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, mustChangePassword } = useAuth();
 
   if (loading) {
     return (
@@ -32,6 +33,10 @@ function AuthGate({ children }) {
 
   if (!isAuthenticated) {
     return <Login />;
+  }
+
+  if (mustChangePassword) {
+    return <ChangePassword />;
   }
 
   return children;

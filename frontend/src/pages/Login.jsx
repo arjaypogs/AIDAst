@@ -1,16 +1,14 @@
 /**
- * Login / Register page
+ * Login page — username/password only. No public registration.
  */
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { User, Lock, Mail, AlertCircle } from 'lucide-react';
+import { User, Lock, AlertCircle } from 'lucide-react';
 
 export default function Login() {
-  const { login, register, authRequired } = useAuth();
-  const [isRegister, setIsRegister] = useState(!authRequired);
+  const { login, backendUnreachable } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -19,11 +17,7 @@ export default function Login() {
     setError('');
     setSubmitting(true);
     try {
-      if (isRegister) {
-        await register(username, password, email || undefined);
-      } else {
-        await login(username, password);
-      }
+      await login(username, password);
     } catch (err) {
       setError(err.response?.data?.detail || 'Authentication failed');
     } finally {
@@ -34,7 +28,6 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-neutral-50 dark:bg-neutral-900 px-4">
       <div className="w-full max-w-md">
-        {/* Logo */}
         <div className="text-center mb-8">
           <img
             src="/assets/aida-logo.png"
@@ -47,16 +40,15 @@ export default function Login() {
           </p>
         </div>
 
-        {/* Card */}
         <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-lg border border-neutral-200 dark:border-neutral-700 p-6">
           <h2 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100 mb-4">
-            {isRegister ? 'Create Account' : 'Sign In'}
+            Sign In
           </h2>
 
-          {!authRequired && (
-            <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-              <p className="text-sm text-blue-700 dark:text-blue-300">
-                Welcome! Create your first account to secure the platform.
+          {backendUnreachable && (
+            <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+              <p className="text-sm text-amber-700 dark:text-amber-300">
+                Backend unreachable. Check that the API is running.
               </p>
             </div>
           )}
@@ -88,24 +80,6 @@ export default function Login() {
               </div>
             </div>
 
-            {isRegister && (
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                  Email <span className="text-neutral-400">(optional)</span>
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-10 pr-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                    placeholder="email@example.com"
-                  />
-                </div>
-              </div>
-            )}
-
             <div>
               <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
                 Password
@@ -117,9 +91,8 @@ export default function Login() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  minLength={6}
                   className="w-full pl-10 pr-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                  placeholder="Min 6 characters"
+                  placeholder="Password"
                 />
               </div>
             </div>
@@ -129,21 +102,9 @@ export default function Login() {
               disabled={submitting}
               className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium rounded-lg transition-colors"
             >
-              {submitting ? 'Please wait...' : isRegister ? 'Create Account' : 'Sign In'}
+              {submitting ? 'Please wait...' : 'Sign In'}
             </button>
           </form>
-
-          {authRequired && (
-            <div className="mt-4 text-center">
-              <button
-                type="button"
-                onClick={() => { setIsRegister(!isRegister); setError(''); }}
-                className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
-              >
-                {isRegister ? 'Already have an account? Sign in' : 'Need an account? Register'}
-              </button>
-            </div>
-          )}
         </div>
       </div>
     </div>
