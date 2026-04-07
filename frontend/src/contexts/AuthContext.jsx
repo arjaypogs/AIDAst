@@ -72,6 +72,7 @@ export function AuthProvider({ children }) {
     setToken(result.token);
     setUser(result.user);
     setBackendUnreachable(false);
+    window.dispatchEvent(new CustomEvent('aida:auth-loaded'));
     return result;
   }, []);
 
@@ -81,6 +82,7 @@ export function AuthProvider({ children }) {
     setUser(result.user);
     setSetupRequired(false);
     setBackendUnreachable(false);
+    window.dispatchEvent(new CustomEvent('aida:auth-loaded'));
     return result;
   }, []);
 
@@ -88,6 +90,17 @@ export function AuthProvider({ children }) {
     clearAuth();
     setToken(null);
     setUser(null);
+  }, []);
+
+  // Listen for 401s emitted by the axios interceptor (token expired or
+  // revoked while the app was running) and reset auth state without reloading.
+  useEffect(() => {
+    const onCleared = () => {
+      setToken(null);
+      setUser(null);
+    };
+    window.addEventListener('aida:auth-cleared', onCleared);
+    return () => window.removeEventListener('aida:auth-cleared', onCleared);
   }, []);
 
   const refreshUser = useCallback((freshUser) => {

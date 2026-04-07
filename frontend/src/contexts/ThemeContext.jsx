@@ -116,10 +116,26 @@ export const ThemeProvider = ({ children }) => {
   const [primaryColor, setPrimaryColor] = useState('cyan');
   const [loading, setLoading] = useState(true);
 
-  // Load theme from backend on mount
+  // Load theme from backend once an auth token is present. We listen to a
+  // custom event so we react both to login and to logout (auth-cleared)
+  // without re-fetching protected endpoints while logged out.
   useEffect(() => {
-    loadTheme();
-    loadPrimaryColor();
+    const tryLoad = () => {
+      if (localStorage.getItem('aida_token')) {
+        loadTheme();
+        loadPrimaryColor();
+      } else {
+        // No token: stay on local defaults, don't hit protected endpoints.
+        setLoading(false);
+      }
+    };
+    tryLoad();
+    window.addEventListener('aida:auth-loaded', tryLoad);
+    window.addEventListener('aida:auth-cleared', tryLoad);
+    return () => {
+      window.removeEventListener('aida:auth-loaded', tryLoad);
+      window.removeEventListener('aida:auth-cleared', tryLoad);
+    };
   }, []);
 
   // Apply theme to document

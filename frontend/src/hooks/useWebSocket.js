@@ -35,6 +35,12 @@ export function useWebSocket(assessmentId = null) {
       return;
     }
 
+    // Don't even try to connect without a token: the backend will close the
+    // socket immediately and we'd burn through the reconnect budget.
+    if (!localStorage.getItem('aida_token')) {
+      return;
+    }
+
     try {
       const url = getWebSocketUrl();
       // console.log(`[WebSocket] Connecting to ${url}...`);

@@ -27,17 +27,22 @@ apiClient.interceptors.request.use(
   }
 );
 
-// Response interceptor - handle 401 (expired/invalid token)
+// Response interceptor — handle 401 (expired/invalid token).
+// We must NEVER call window.location.reload() here: a reload would re-mount
+// every context, which would re-fire the same protected requests, which would
+// 401 again, which would reload again — an infinite loop. Instead we clear the
+// stored auth and emit an event so AuthContext can transition to <Login />
+// without unmounting the React tree.
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Token expired or invalid — clear auth and reload to show login
-      localStorage.removeItem('aida_token');
-      localStorage.removeItem('aida_user');
-      // Only redirect if not already on an auth endpoint
-      if (!error.config?.url?.includes('/auth/')) {
-        window.location.reload();
+      const url = error.config?.url || '';
+      const isAuthEndpoint = url.includes('/auth/');
+      if (!isAuthEndpoint && localStorage.getItem('aida_token')) {
+        localStorage.removeItem('aida_token');
+        localStorage.removeItem('aida_user');
+        window.dispatchEvent(new CustomEvent('aida:auth-cleared'));
       }
     }
     const message = error.response?.data?.detail || error.message || 'An error occurred';
