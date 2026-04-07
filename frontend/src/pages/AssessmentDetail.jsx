@@ -473,7 +473,13 @@ const AssessmentDetail = () => {
           </button>
           <div className="relative">
             <button
-              onClick={() => setShowStartAI(!showStartAI)}
+              onClick={() => {
+                // Clear any stale result from a previous open so the popup
+                // always starts fresh — otherwise reopening after a success
+                // shows the old success banner with no launch button.
+                if (!showStartAI) setLaunchResult(null);
+                setShowStartAI(!showStartAI);
+              }}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-primary-600 hover:bg-primary-700 border border-primary-600 rounded-md transition-colors"
               title="Start AI-driven scan"
             >
