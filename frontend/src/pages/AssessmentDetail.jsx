@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Target, Server, Shield, ArrowLeft, AlertTriangle, Info, Eye, TrendingUp, Filter, FolderOpen, RefreshCw, FileText, Download, Send, Play, Copy, Check, Plus } from '../components/icons';
 import apiClient from '../services/api';
@@ -61,6 +61,7 @@ const AssessmentDetail = () => {
   const [launchingAI, setLaunchingAI] = useState(false);
   const [launchResult, setLaunchResult] = useState(null);
   const [showMcpNotice, setShowMcpNotice] = useState(false);
+  const startAIRef = useRef(null);
 
   // WebSocket connection for real-time updates
   const { subscribe, isConnected } = useWebSocket(id);
@@ -68,6 +69,19 @@ const AssessmentDetail = () => {
   useEffect(() => {
     loadAssessment();
   }, [id]);
+
+  // Close Start AI popup on click outside
+  useEffect(() => {
+    if (!showStartAI) return;
+    const handleClickOutside = (e) => {
+      if (startAIRef.current && !startAIRef.current.contains(e.target)) {
+        setShowStartAI(false);
+        setLaunchResult(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showStartAI]);
 
   // Subscribe to WebSocket events for real-time updates
   useEffect(() => {
@@ -472,7 +486,7 @@ const AssessmentDetail = () => {
             <Send className="w-3.5 h-3.5" />
             <span>Send</span>
           </button>
-          <div className="relative">
+          <div className="relative" ref={startAIRef}>
             <button
               onClick={() => {
                 if (!localStorage.getItem('aida_mcp_notice_seen')) {
