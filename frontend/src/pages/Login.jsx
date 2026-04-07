@@ -3,7 +3,7 @@
  */
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Shield, User, Lock, Mail, AlertCircle } from 'lucide-react';
+import { User, Lock, Mail, AlertCircle } from 'lucide-react';
 
 export default function Login() {
   const { login, register, authRequired } = useAuth();
@@ -36,9 +36,11 @@ export default function Login() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-600 mb-4">
-            <Shield className="w-8 h-8 text-white" />
-          </div>
+          <img
+            src="/assets/aida-logo.png"
+            alt="AIDA Logo"
+            className="w-16 h-16 mx-auto mb-4 object-contain"
+          />
           <h1 className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">AIDA</h1>
           <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
             AI-Driven Security Assessment
