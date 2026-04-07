@@ -16,7 +16,7 @@ from database import get_db
 from models.user import User
 
 # Configuration
-SECRET_KEY = os.getenv("SECRET_KEY", "aida-test-secret-key-change-in-production-min-32-chars!")
+SECRET_KEY = os.getenv("SECRET_KEY", "aida-secret-key-change-in-production-min-32-chars!")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "1440"))  # 24 hours
 

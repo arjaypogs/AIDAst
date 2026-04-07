@@ -33,7 +33,7 @@ class Settings(BaseSettings):
 
     # Container Configuration
     CONTAINER_WORKSPACE_BASE: str = "/workspace"
-    DEFAULT_CONTAINER_NAME: str = "aida-test-pentest"
+    DEFAULT_CONTAINER_NAME: str = "aida-pentest"
     # Comma-separated list of accepted container name prefixes.
     # Both aida- (new) and exegol- (legacy) are accepted for backward compat.
     CONTAINER_PREFIX_FILTER: str = "aida-,exegol-"
@@ -52,7 +52,7 @@ class Settings(BaseSettings):
     BACKEND_API_URL: str = "http://localhost:8000/api"
 
     # Authentication (JWT)
-    SECRET_KEY: str = "aida-test-secret-key-change-in-production-min-32-chars!"
+    SECRET_KEY: str = "aida-secret-key-change-in-production-min-32-chars!"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
 
     # Environment

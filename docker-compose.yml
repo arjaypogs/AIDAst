@@ -2,7 +2,7 @@ services:
   # PostgreSQL Database
   postgres:
     image: postgres:16-alpine
-    container_name: aida_test_postgres
+    container_name: aida_postgres
     env_file:
       - backend/.env
     environment:
@@ -14,7 +14,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - aida-test-network
+      - aida-network
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-aida} -d ${POSTGRES_DB:-aida_assessments}" ]
       interval: 5s
@@ -27,7 +27,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: aida_test_backend
+    container_name: aida_backend
     env_file:
       - backend/.env
     environment:
@@ -47,7 +47,7 @@ services:
       # Mount logs directory with SELinux flag
       - ./backend/logs:/app/logs:z
     networks:
-      - aida-test-network
+      - aida-network
     depends_on:
       postgres:
         condition: service_healthy
@@ -64,7 +64,7 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: aida_test_frontend
+    container_name: aida_frontend
     environment:
       # Frontend talks to backend via localhost (browser runs on host)
       VITE_API_URL: http://localhost:8000/api
@@ -76,7 +76,7 @@ services:
       - ./frontend:/app:z
       - /app/node_modules
     networks:
-      - aida-test-network
+      - aida-network
     depends_on:
       - backend
     restart: unless-stopped
@@ -90,11 +90,11 @@ services:
   # AIDA Pentest Container
   # Lightweight execution environment for AI-driven assessments.
   # The backend connects to this container via Docker socket (docker exec).
-  aida-test-pentest:
+  aida-pentest:
     build:
       context: ./pentest
       dockerfile: Dockerfile
-    container_name: aida-test-pentest
+    container_name: aida-pentest
     tty: true
     stdin_open: true
     volumes:
@@ -103,14 +103,14 @@ services:
       # host path resolution in aida.py continues to work without changes.
       - ${HOME}/.aida/workspaces:/workspace
     networks:
-      - aida-test-network
+      - aida-network
     restart: unless-stopped
 
 networks:
-  aida-test-network:
-    name: aida-test-network
+  aida-network:
+    name: aida-network
     driver: bridge
 
 volumes:
   postgres_data:
-    name: aida_test_postgres_data
+    name: aida_postgres_data

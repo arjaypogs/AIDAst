@@ -35,7 +35,7 @@ class AidaMCPService:
 
         # Docker/Container management
         self.current_container: Optional[str] = None
-        self.claude_container_name: str = os.getenv("DEFAULT_CONTAINER_NAME", "aida-test-pentest")
+        self.claude_container_name: str = os.getenv("DEFAULT_CONTAINER_NAME", "aida-pentest")
         self.containers_cache: List[Dict[str, Any]] = []
         self.cache_timestamp: float = 0
         self.cache_ttl: int = 30

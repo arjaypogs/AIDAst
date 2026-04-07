@@ -158,7 +158,7 @@ if [[ ! -f "$CONTAINER_PREFS_FILE" ]]; then
     echo ""
     echo "  AIDA needs a pentesting container to run security tools."
     echo ""
-    echo "  [1] aida-test-pentest  (Recommended)"
+    echo "  [1] aida-pentest  (Recommended)"
     echo "      Built-in, managed by AIDA — starts automatically with ./start.sh"
     echo "      Size: ~2 GB |  Tools: nmap, ffuf, gobuster, sqlmap, nikto..."
     echo ""
@@ -180,12 +180,12 @@ if [[ ! -f "$CONTAINER_PREFS_FILE" ]]; then
         warn "  Start:   exegol start aida"
         echo ""
     else
-        echo "aida-test-pentest" > "$CONTAINER_PREFS_FILE"
-        log "aida-test-pentest selected — the built-in container will start automatically."
+        echo "aida-pentest" > "$CONTAINER_PREFS_FILE"
+        log "aida-pentest selected — the built-in container will start automatically."
     fi
 fi
 
-CONTAINER_MODE=$(cat "$CONTAINER_PREFS_FILE" 2>/dev/null || echo "aida-test-pentest")
+CONTAINER_MODE=$(cat "$CONTAINER_PREFS_FILE" 2>/dev/null || echo "aida-pentest")
 
 # ==============================================================================
 # PYTHON ENVIRONMENTS (Only if missing)
@@ -227,9 +227,9 @@ fi
 section "Docker Containers"
 
 # Check for orphan containers from other projects with same names
-ORPHAN_POSTGRES=$(docker ps -a --format "{{.Names}}" | grep "^aida_test_postgres$" || true)
-ORPHAN_BACKEND=$(docker ps -a --format "{{.Names}}" | grep "^aida_test_backend$" || true)
-ORPHAN_FRONTEND=$(docker ps -a --format "{{.Names}}" | grep "^aida_test_frontend$" || true)
+ORPHAN_POSTGRES=$(docker ps -a --format "{{.Names}}" | grep "^aida_postgres$" || true)
+ORPHAN_BACKEND=$(docker ps -a --format "{{.Names}}" | grep "^aida_backend$" || true)
+ORPHAN_FRONTEND=$(docker ps -a --format "{{.Names}}" | grep "^aida_frontend$" || true)
 
 # Check if these containers belong to our project
 OUR_CONTAINERS=$($COMPOSE_CMD ps -a -q 2>/dev/null | wc -l | tr -d ' ')
@@ -237,15 +237,15 @@ OUR_CONTAINERS=$($COMPOSE_CMD ps -a -q 2>/dev/null | wc -l | tr -d ' ')
 if [[ -n "$ORPHAN_POSTGRES" || -n "$ORPHAN_BACKEND" || -n "$ORPHAN_FRONTEND" ]] && [[ "$OUR_CONTAINERS" -eq 0 ]]; then
     warn "Found containers from another project with same names"
     log "Removing orphan containers..."
-    docker rm -f aida_test_postgres aida_test_backend aida_test_frontend 2>/dev/null || true
+    docker rm -f aida_postgres aida_backend aida_frontend 2>/dev/null || true
     log "Orphan containers removed"
 fi
 
 # Check if volume exists but belongs to another project - recreate it for this project
-VOLUME_EXISTS=$(docker volume ls -q | grep "^aida_test_postgres_data$" || true)
+VOLUME_EXISTS=$(docker volume ls -q | grep "^aida_postgres_data$" || true)
 if [[ -n "$VOLUME_EXISTS" ]]; then
     # Volume exists - check if it's labeled for another project
-    VOLUME_PROJECT=$(docker volume inspect aida_test_postgres_data --format '{{index .Labels "com.docker.compose.project"}}' 2>/dev/null || true)
+    VOLUME_PROJECT=$(docker volume inspect aida_postgres_data --format '{{index .Labels "com.docker.compose.project"}}' 2>/dev/null || true)
     if [[ -n "$VOLUME_PROJECT" && "$VOLUME_PROJECT" != "aida" ]]; then
         log "Adopting existing postgres volume from project '$VOLUME_PROJECT'"
         # Remove old labels by recreating volume metadata (data preserved)
@@ -256,16 +256,16 @@ fi
 # Check if images exist
 BACKEND_IMAGE=$(docker images -q aida-backend 2>/dev/null)
 FRONTEND_IMAGE=$(docker images -q aida-frontend 2>/dev/null)
-PENTEST_IMAGE=$(docker images -q aida-aida-test-pentest 2>/dev/null)
+PENTEST_IMAGE=$(docker images -q aida-aida-pentest 2>/dev/null)
 
 BUILD_NEEDED=false
 [[ -z "$BACKEND_IMAGE" || -z "$FRONTEND_IMAGE" ]] && BUILD_NEEDED=true
-[[ "$CONTAINER_MODE" == "aida-test-pentest" && -z "$PENTEST_IMAGE" ]] && BUILD_NEEDED=true
+[[ "$CONTAINER_MODE" == "aida-pentest" && -z "$PENTEST_IMAGE" ]] && BUILD_NEEDED=true
 [[ "$FORCE_BUILD" == "true" ]] && BUILD_NEEDED=true
 
 if [[ "$BUILD_NEEDED" == "true" ]]; then
-    if [[ "$CONTAINER_MODE" == "aida-test-pentest" ]]; then
-        log "Building Docker images (first build of aida-test-pentest may take a few minutes)..."
+    if [[ "$CONTAINER_MODE" == "aida-pentest" ]]; then
+        log "Building Docker images (first build of aida-pentest may take a few minutes)..."
         $COMPOSE_CMD build --quiet
     else
         log "Building Docker images..."
@@ -288,7 +288,7 @@ if [[ "$RUNNING_CONTAINERS" -ge 3 ]]; then
     log "Containers already running"
 elif [[ "$STOPPED_CONTAINERS" -gt 0 ]]; then
     log "Starting existing containers..."
-    if [[ "$CONTAINER_MODE" == "aida-test-pentest" ]]; then
+    if [[ "$CONTAINER_MODE" == "aida-pentest" ]]; then
         $COMPOSE_CMD start 2>/dev/null
     else
         $COMPOSE_CMD start postgres backend frontend 2>/dev/null
@@ -296,7 +296,7 @@ elif [[ "$STOPPED_CONTAINERS" -gt 0 ]]; then
 else
     log "Creating and starting containers..."
     # Suppress volume warning (cosmetic - data is preserved)
-    if [[ "$CONTAINER_MODE" == "aida-test-pentest" ]]; then
+    if [[ "$CONTAINER_MODE" == "aida-pentest" ]]; then
         $COMPOSE_CMD up -d 2>&1 | grep -v "already exists but was created for project" || true
     else
         $COMPOSE_CMD up -d postgres backend frontend 2>&1 | grep -v "already exists but was created for project" || true
@@ -355,12 +355,12 @@ if [[ "$CONTAINER_MODE" == "exegol" ]]; then
         log "Exegol container: $EXEGOL_RUNNING"
     fi
 else
-    PENTEST_RUNNING=$(docker ps --format "{{.Names}}" 2>/dev/null | grep "^aida-test-pentest$" || true)
+    PENTEST_RUNNING=$(docker ps --format "{{.Names}}" 2>/dev/null | grep "^aida-pentest$" || true)
     if [[ -z "$PENTEST_RUNNING" ]]; then
-        warn "aida-test-pentest not running — starting..."
-        $COMPOSE_CMD up -d aida-test-pentest 2>&1 | grep -v "already" || true
+        warn "aida-pentest not running — starting..."
+        $COMPOSE_CMD up -d aida-pentest 2>&1 | grep -v "already" || true
     else
-        log "Pentesting container: aida-test-pentest"
+        log "Pentesting container: aida-pentest"
     fi
 fi
 
