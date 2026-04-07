@@ -68,10 +68,10 @@ class AidaMCPService:
         self.http_client = httpx.AsyncClient(timeout=120.0)
 
         if not self.is_initialized:
-            file_log.info("Auto-detecting Exegol containers...")
+            file_log.info("Auto-detecting pentesting containers...")
             containers = await self.discover_containers()
 
-            # Look for existing Claude container
+            # Look for the configured default container first
             claude_container = next(
                 (c for c in containers if c["name"] == self.claude_container_name),
                 None
@@ -79,7 +79,7 @@ class AidaMCPService:
 
             if claude_container:
                 self.current_container = self.claude_container_name
-                file_log.info(f"Auto-selected Claude container: {self.claude_container_name}")
+                file_log.info(f"Auto-selected container: {self.claude_container_name}")
             else:
                 # Look for running containers first
                 running_containers = [c for c in containers if "running" in c["status"].lower()]
@@ -89,6 +89,10 @@ class AidaMCPService:
                 elif containers:
                     self.current_container = containers[0]["name"]
                     file_log.info(f"Auto-selected first available container: {self.current_container}")
+                else:
+                    # Fallback: trust the configured default exists
+                    self.current_container = self.claude_container_name
+                    file_log.info(f"No containers discovered, defaulting to: {self.claude_container_name}")
 
             self.is_initialized = True
 
@@ -529,11 +533,17 @@ class AidaMCPService:
                         try:
                             container_data = json.loads(line)
                             image = container_data.get("Image", "")
+                            name = container_data.get("Names", "unknown").lstrip('/')
 
-                            if ("exegol" in image.lower() or
-                                    "nwodtuhs/exegol" in image.lower()):
+                            # Include Exegol containers and AIDA built-in containers
+                            is_exegol = ("exegol" in image.lower() or
+                                         "nwodtuhs/exegol" in image.lower())
+                            is_aida = ("aida" in image.lower() and "pentest" in image.lower())
+                            is_default = (name == self.claude_container_name)
+
+                            if is_exegol or is_aida or is_default:
                                 containers.append({
-                                    "name": container_data.get("Names", "unknown").lstrip('/'),
+                                    "name": name,
                                     "image": image,
                                     "status": container_data.get("State", "unknown"),
                                     "id": container_data.get("ID", "unknown")[:12],
