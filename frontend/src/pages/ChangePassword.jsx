@@ -49,7 +49,7 @@ export default function ChangePassword() {
     <div className="min-h-screen flex items-center justify-center bg-neutral-50 dark:bg-neutral-900 px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <KeyRound className="w-12 h-12 mx-auto mb-4 text-blue-600" />
+          <KeyRound className="w-12 h-12 mx-auto mb-4 text-primary-600" />
           <h1 className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">
             Set a new password
           </h1>
@@ -91,7 +91,7 @@ export default function ChangePassword() {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium rounded-lg transition-colors"
+              className="w-full py-2.5 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
             >
               {submitting ? 'Saving...' : 'Update password'}
             </button>
@@ -124,7 +124,7 @@ function PasswordField({ label, value, onChange, autoFocus }) {
           onChange={(e) => onChange(e.target.value)}
           required
           autoFocus={autoFocus}
-          className="w-full pl-10 pr-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+          className="w-full pl-10 pr-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
         />
       </div>
     </div>

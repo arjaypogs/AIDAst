@@ -69,7 +69,7 @@ export default function Users() {
         </div>
         <button
           onClick={() => setShowCreate(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium"
+          className="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-medium transition-colors"
         >
           <Plus className="w-4 h-4" /> New user
         </button>
@@ -197,16 +197,16 @@ function CreateUserModal({ onClose, onCreated }) {
       <form onSubmit={handleSubmit} className="space-y-3">
         {error && <div className="p-2 text-sm bg-red-50 text-red-700 rounded">{error}</div>}
         <Field label="Username">
-          <input value={username} onChange={(e) => setUsername(e.target.value)} required minLength={3} className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-blue-500 outline-none" />
+          <input value={username} onChange={(e) => setUsername(e.target.value)} required minLength={3} className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-primary-500 outline-none" />
         </Field>
         <Field label="Email (optional)">
-          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-blue-500 outline-none" />
+          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-primary-500 outline-none" />
         </Field>
         <Field label="Initial password (min 7 chars)">
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={7} className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-blue-500 outline-none" />
+          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={7} className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-primary-500 outline-none" />
         </Field>
         <Field label="Role">
-          <select value={role} onChange={(e) => setRole(e.target.value)} className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-blue-500 outline-none">
+          <select value={role} onChange={(e) => setRole(e.target.value)} className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-primary-500 outline-none">
             <option value="user">user</option>
             <option value="admin">admin</option>
           </select>
@@ -214,7 +214,7 @@ function CreateUserModal({ onClose, onCreated }) {
         <p className="text-xs text-neutral-500">User will be required to change this password on first login.</p>
         <div className="flex gap-2 justify-end pt-2">
           <button type="button" onClick={onClose} className="px-3 py-2 text-sm rounded border border-neutral-300 dark:border-neutral-600">Cancel</button>
-          <button type="submit" disabled={submitting} className="px-3 py-2 text-sm rounded bg-blue-600 text-white disabled:bg-blue-400">
+          <button type="submit" disabled={submitting} className="px-3 py-2 text-sm rounded bg-primary-600 hover:bg-primary-700 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
             {submitting ? 'Creating…' : 'Create'}
           </button>
         </div>
@@ -247,12 +247,12 @@ function ResetPasswordModal({ user, onClose, onDone }) {
       <form onSubmit={handleSubmit} className="space-y-3">
         {error && <div className="p-2 text-sm bg-red-50 text-red-700 rounded">{error}</div>}
         <Field label="New password (min 7 chars)">
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={7} className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-blue-500 outline-none" autoFocus />
+          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={7} className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-primary-500 outline-none" autoFocus />
         </Field>
         <p className="text-xs text-neutral-500">User will be required to change it on next login.</p>
         <div className="flex gap-2 justify-end pt-2">
           <button type="button" onClick={onClose} className="px-3 py-2 text-sm rounded border border-neutral-300 dark:border-neutral-600">Cancel</button>
-          <button type="submit" disabled={submitting} className="px-3 py-2 text-sm rounded bg-blue-600 text-white disabled:bg-blue-400">
+          <button type="submit" disabled={submitting} className="px-3 py-2 text-sm rounded bg-primary-600 hover:bg-primary-700 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
             {submitting ? 'Saving…' : 'Reset'}
           </button>
         </div>
