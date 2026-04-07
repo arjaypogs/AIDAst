@@ -33,10 +33,11 @@ fi
 
 section "AIDA - Stopping Services"
 
-# Stop folder opener
-if pkill -f "folder_opener.py" 2>/dev/null; then
-    log "Stopped Folder Opener"
+# Stop host helper
+if pkill -f "tools/helper.py" 2>/dev/null; then
+    log "Stopped Host Helper"
 fi
+pkill -f "folder_opener.py" 2>/dev/null || true  # legacy name
 
 # Check current state
 RUNNING=$($COMPOSE_CMD ps --status running -q 2>/dev/null | wc -l | tr -d ' ')

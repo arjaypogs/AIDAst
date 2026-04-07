@@ -224,7 +224,7 @@ class WorkspaceService:
 
         NOTE: This method will FAIL when backend runs in Docker container
         because xdg-open/open commands cannot access host GUI.
-        The frontend uses the local folder_opener.py service instead.
+        The frontend uses the local tools/helper.py service instead.
         This method is kept as fallback for non-Docker deployments.
 
         Supports:

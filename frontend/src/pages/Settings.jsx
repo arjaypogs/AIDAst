@@ -438,7 +438,7 @@ const Settings = () => {
       if (result.success && result.host_path) {
         // Try to open via local folder opener service (runs on host)
         try {
-          const { openFolderOnHost } = await import('../services/folderOpenerService');
+          const { openFolderOnHost } = await import('../services/hostHelperService');
           const openResult = await openFolderOnHost(result.host_path);
           if (openResult.success) {
             setWorkspaceMessage({

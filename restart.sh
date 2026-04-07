@@ -45,11 +45,12 @@ if [[ "$TOTAL" -eq 0 ]]; then
     exit 1
 fi
 
-# Restart folder opener
-pkill -f "folder_opener.py" 2>/dev/null || true
-if [[ -f "$SCRIPT_DIR/tools/folder_opener.py" ]]; then
-    python3 "$SCRIPT_DIR/tools/folder_opener.py" &>/dev/null &
-    log "Restarted Folder Opener"
+# Restart host helper
+pkill -f "tools/helper.py" 2>/dev/null || true
+pkill -f "folder_opener.py" 2>/dev/null || true  # legacy name
+if [[ -f "$SCRIPT_DIR/tools/helper.py" ]]; then
+    python3 "$SCRIPT_DIR/tools/helper.py" &>/dev/null &
+    log "Restarted Host Helper"
 fi
 
 # Restart containers

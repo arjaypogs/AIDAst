@@ -332,12 +332,13 @@ wait_for_service "Backend" "curl -sf http://localhost:8000/health"
 wait_for_service "Frontend" "curl -sf http://localhost:5173"
 
 # ==============================================================================
-# FOLDER OPENER (Background helper)
+# HOST HELPER (Background)
 # ==============================================================================
 
-pkill -f "folder_opener.py" 2>/dev/null || true
-if [[ -f "$SCRIPT_DIR/tools/folder_opener.py" ]]; then
-    python3 "$SCRIPT_DIR/tools/folder_opener.py" &>/dev/null &
+pkill -f "tools/helper.py" 2>/dev/null || true
+pkill -f "folder_opener.py" 2>/dev/null || true  # legacy name, just in case
+if [[ -f "$SCRIPT_DIR/tools/helper.py" ]]; then
+    python3 "$SCRIPT_DIR/tools/helper.py" &>/dev/null &
 fi
 
 # ==============================================================================

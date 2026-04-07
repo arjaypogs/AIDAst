@@ -228,7 +228,7 @@ const AssessmentDetail = () => {
       if (result.success && result.host_path) {
         // Try to open via local folder opener service (runs on host)
         try {
-          const { openFolderOnHost } = await import('../services/folderOpenerService');
+          const { openFolderOnHost } = await import('../services/hostHelperService');
           const openResult = await openFolderOnHost(result.host_path);
           if (openResult.success) {
             return; // Success!
@@ -482,66 +482,82 @@ const AssessmentDetail = () => {
             </button>
             {showStartAI && (
               <div className="absolute right-0 top-full mt-2 w-96 bg-white dark:bg-neutral-800 rounded-lg shadow-xl border border-neutral-200 dark:border-neutral-700 p-4 z-50">
-                <h4 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 mb-2">Launch AI Scan</h4>
+                <h4 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Launch AI Scan</h4>
 
-                {/* Launch button */}
-                <button
-                  onClick={async () => {
-                    setLaunchingAI(true);
-                    setLaunchResult(null);
-                    try {
-                      const resp = await fetch('http://localhost:9876/launch', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ assessment_name: assessment.name }),
-                      });
-                      const data = await resp.json();
-                      setLaunchResult(data.success ? { type: 'success', text: 'Terminal opened with AI scan!' } : { type: 'error', text: data.error || 'Failed to launch' });
-                    } catch (e) {
-                      setLaunchResult({ type: 'error', text: 'Host helper not running. Use the command below instead.' });
-                    } finally {
-                      setLaunchingAI(false);
-                    }
-                  }}
-                  disabled={launchingAI}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
-                >
-                  <Play className="w-4 h-4" />
-                  {launchingAI ? 'Opening terminal...' : 'Open in Terminal'}
-                </button>
-
-                {launchResult && (
-                  <div className={`mt-2 flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs ${
-                    launchResult.type === 'success' ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400' : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400'
-                  }`}>
-                    {launchResult.type === 'success' ? <Check className="w-3 h-3" /> : <AlertTriangle className="w-3 h-3" />}
-                    <span>{launchResult.text}</span>
+                {launchResult?.type === 'success' ? (
+                  /* Success state — only show confirmation */
+                  <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-sm">
+                    <Check className="w-4 h-4 flex-shrink-0" />
+                    <span>Terminal opened with AI scan</span>
                   </div>
+                ) : (
+                  <>
+                    {/* Launch button */}
+                    <button
+                      onClick={async () => {
+                        setLaunchingAI(true);
+                        setLaunchResult(null);
+                        try {
+                          const resp = await fetch('http://localhost:9876/launch', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ assessment_name: assessment.name }),
+                          });
+                          const data = await resp.json();
+                          setLaunchResult(data.success ? { type: 'success', text: 'Terminal opened with AI scan!' } : { type: 'error', text: data.error || 'Failed to launch' });
+                        } catch (e) {
+                          setLaunchResult({ type: 'error', text: 'Host helper not running. Use the command below instead.' });
+                        } finally {
+                          setLaunchingAI(false);
+                        }
+                      }}
+                      disabled={launchingAI}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                    >
+                      <Play className="w-4 h-4" />
+                      {launchingAI ? 'Opening terminal...' : 'Open in Terminal'}
+                    </button>
+
+                    {launchResult?.type === 'error' && (
+                      <div className="mt-2 flex items-start gap-1.5 px-2.5 py-1.5 rounded text-xs bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400">
+                        <AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                        <span>{launchResult.text}</span>
+                      </div>
+                    )}
+
+                    {/* Fallback: copy command */}
+                    <div className="mt-3 pt-3 border-t border-neutral-200 dark:border-neutral-700">
+                      <p className="text-[10px] text-neutral-500 dark:text-neutral-400 mb-1.5">Or run manually:</p>
+                      <div className="relative">
+                        <pre className="text-[11px] font-mono bg-neutral-900 text-green-400 px-3 py-2 rounded-lg overflow-x-auto">python3 aida.py -a "{assessment.name}"</pre>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(`python3 aida.py -a "${assessment.name}"`);
+                            setCopiedCmd(true);
+                            setTimeout(() => setCopiedCmd(false), 2000);
+                          }}
+                          className="absolute top-1 right-1 p-1 rounded bg-neutral-700 hover:bg-neutral-600"
+                        >
+                          {copiedCmd ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3 text-neutral-400" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* External MCP clients notice */}
+                    <div className="mt-3 pt-3 border-t border-neutral-200 dark:border-neutral-700 flex items-start gap-1.5 text-[10px] text-neutral-500 dark:text-neutral-400">
+                      <Info className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                      <span>
+                        <strong>External MCP clients</strong> (Claude Desktop, Cursor, etc.) require running <code className="font-mono">aida.py</code> once first to authenticate and cache the API key.
+                      </span>
+                    </div>
+
+                    <div className="mt-2 text-[10px] text-neutral-500 dark:text-neutral-400">
+                      Commands requiring approval will appear in the <strong>Commands</strong> page.
+                    </div>
+                  </>
                 )}
 
-                {/* Fallback: copy command */}
-                <div className="mt-3 pt-3 border-t border-neutral-200 dark:border-neutral-700">
-                  <p className="text-[10px] text-neutral-500 dark:text-neutral-400 mb-1.5">Or run manually:</p>
-                  <div className="relative">
-                    <pre className="text-[11px] font-mono bg-neutral-900 text-green-400 px-3 py-2 rounded-lg overflow-x-auto">python3 aida.py -a "{assessment.name}"</pre>
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(`python3 aida.py -a "${assessment.name}"`);
-                        setCopiedCmd(true);
-                        setTimeout(() => setCopiedCmd(false), 2000);
-                      }}
-                      className="absolute top-1 right-1 p-1 rounded bg-neutral-700 hover:bg-neutral-600"
-                    >
-                      {copiedCmd ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3 text-neutral-400" />}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="mt-2 text-[10px] text-neutral-500 dark:text-neutral-400">
-                  Commands requiring approval will appear in the <strong>Commands</strong> page.
-                </div>
-
-                <button onClick={() => { setShowStartAI(false); setLaunchResult(null); }} className="mt-2 w-full text-xs text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300">
+                <button onClick={() => { setShowStartAI(false); setLaunchResult(null); }} className="mt-3 w-full text-xs text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300">
                   Close
                 </button>
               </div>
