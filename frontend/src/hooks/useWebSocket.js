@@ -17,12 +17,15 @@ export function useWebSocket(assessmentId = null) {
   const [lastError, setLastError] = useState(null);
   const [lastMessage, setLastMessage] = useState(null);
 
-  // Build WebSocket URL based on assessment ID
+  // Build WebSocket URL based on assessment ID. The JWT is passed via query
+  // string because browser WebSocket clients can't set Authorization headers.
   const getWebSocketUrl = useCallback(() => {
+    const token = localStorage.getItem('aida_token');
+    const tokenQs = token ? `?token=${encodeURIComponent(token)}` : '';
     if (assessmentId) {
-      return `${WS_URL}/ws/assessment/${assessmentId}`;
+      return `${WS_URL}/ws/assessment/${assessmentId}${tokenQs}`;
     }
-    return `${WS_URL}/ws`;
+    return `${WS_URL}/ws${tokenQs}`;
   }, [assessmentId]);
 
   // Connect to WebSocket

@@ -1,9 +1,10 @@
 """
 Main FastAPI application
 """
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from auth import get_current_user
 from config import settings
 from database import init_db
 from bootstrap_admin import bootstrap_admin
@@ -55,30 +56,36 @@ app.add_middleware(
     max_age=3600,  # Cache preflight requests for 1 hour
 )
 
-# Include routers
+# Routers requiring an authenticated user. Applied at include time so any new
+# router added here is protected by default — impossible to forget.
+protected = [Depends(get_current_user)]
+
+# Public routers (auth itself, websocket — token validated inside the handler).
 app.include_router(auth.router, prefix=settings.API_V1_PREFIX)
-app.include_router(assessments.router, prefix=settings.API_V1_PREFIX)
-app.include_router(cards.router, prefix=settings.API_V1_PREFIX)
-app.include_router(recon.router, prefix=settings.API_V1_PREFIX)
-app.include_router(commands.router, prefix=settings.API_V1_PREFIX)
-app.include_router(commands_global_router, prefix=settings.API_V1_PREFIX)  # Global commands view
-app.include_router(credentials.router, prefix=settings.API_V1_PREFIX)
-app.include_router(global_commands.router, prefix=settings.API_V1_PREFIX)
-app.include_router(search.router, prefix=settings.API_V1_PREFIX)
-app.include_router(system.router, prefix=settings.API_V1_PREFIX)
-app.include_router(sections.router, prefix=settings.API_V1_PREFIX)
-app.include_router(containers.router, prefix=settings.API_V1_PREFIX)
-app.include_router(folders.router, prefix=settings.API_V1_PREFIX)
-app.include_router(workspace.router, prefix=settings.API_V1_PREFIX)
 app.include_router(websocket.router, prefix=settings.API_V1_PREFIX)
-app.include_router(pending_commands.router, prefix=settings.API_V1_PREFIX)  # Pending commands
-app.include_router(pending_commands.settings_router, prefix=settings.API_V1_PREFIX)  # Command settings
-app.include_router(context_documents.router, prefix=settings.API_V1_PREFIX)  # Context documents
-app.include_router(source_code.router, prefix=settings.API_V1_PREFIX)  # Source code import
-app.include_router(reports.router, prefix=settings.API_V1_PREFIX)  # PDF report generation
-app.include_router(timeline.router, prefix=settings.API_V1_PREFIX)  # Attack timeline
-app.include_router(notifications.router, prefix=settings.API_V1_PREFIX)  # Notifications
-app.include_router(templates.router, prefix=settings.API_V1_PREFIX)  # Assessment templates
+
+# Protected routers
+app.include_router(assessments.router, prefix=settings.API_V1_PREFIX, dependencies=protected)
+app.include_router(cards.router, prefix=settings.API_V1_PREFIX, dependencies=protected)
+app.include_router(recon.router, prefix=settings.API_V1_PREFIX, dependencies=protected)
+app.include_router(commands.router, prefix=settings.API_V1_PREFIX, dependencies=protected)
+app.include_router(commands_global_router, prefix=settings.API_V1_PREFIX, dependencies=protected)
+app.include_router(credentials.router, prefix=settings.API_V1_PREFIX, dependencies=protected)
+app.include_router(global_commands.router, prefix=settings.API_V1_PREFIX, dependencies=protected)
+app.include_router(search.router, prefix=settings.API_V1_PREFIX, dependencies=protected)
+app.include_router(system.router, prefix=settings.API_V1_PREFIX, dependencies=protected)
+app.include_router(sections.router, prefix=settings.API_V1_PREFIX, dependencies=protected)
+app.include_router(containers.router, prefix=settings.API_V1_PREFIX, dependencies=protected)
+app.include_router(folders.router, prefix=settings.API_V1_PREFIX, dependencies=protected)
+app.include_router(workspace.router, prefix=settings.API_V1_PREFIX, dependencies=protected)
+app.include_router(pending_commands.router, prefix=settings.API_V1_PREFIX, dependencies=protected)
+app.include_router(pending_commands.settings_router, prefix=settings.API_V1_PREFIX, dependencies=protected)
+app.include_router(context_documents.router, prefix=settings.API_V1_PREFIX, dependencies=protected)
+app.include_router(source_code.router, prefix=settings.API_V1_PREFIX, dependencies=protected)
+app.include_router(reports.router, prefix=settings.API_V1_PREFIX, dependencies=protected)
+app.include_router(timeline.router, prefix=settings.API_V1_PREFIX, dependencies=protected)
+app.include_router(notifications.router, prefix=settings.API_V1_PREFIX, dependencies=protected)
+app.include_router(templates.router, prefix=settings.API_V1_PREFIX, dependencies=protected)
 
 
 @app.on_event("startup")
