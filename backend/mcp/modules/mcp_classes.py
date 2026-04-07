@@ -31,8 +31,11 @@ class AidaMCPService:
 
         Checks api-key first (long-lived, 1 year) then falls back to
         the short-lived session token written by aida.py.
+
+        Path resolution: this file is at AIDA/backend/mcp/modules/mcp_classes.py
+        so parents[3] = AIDA root.
         """
-        aida_root = Path(__file__).resolve().parents[4]
+        aida_root = Path(__file__).resolve().parents[3]
         for filename in ("api-key", "session"):
             try:
                 path = aida_root / ".aida" / filename

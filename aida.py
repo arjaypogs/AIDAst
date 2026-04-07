@@ -228,6 +228,8 @@ def generate_mcp_config(db_url: str, token: str = "", quiet=False) -> None:
     }
     
     MCP_CONFIG_FILE.write_text(json.dumps(config, indent=2))
+    # Token is embedded in plaintext — restrict to owner only.
+    MCP_CONFIG_FILE.chmod(0o600)
     if not quiet:
         console.print(f"[dim]✓ MCP config: {MCP_CONFIG_FILE.name}[/dim]")
         console.print(f"[dim]  Python: {python_bin_str}[/dim]")
