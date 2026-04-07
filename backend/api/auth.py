@@ -6,6 +6,8 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 
+from pydantic import BaseModel, Field
+
 from database import get_db
 from models.user import User
 from auth import (
@@ -15,6 +17,57 @@ from auth import (
 from middleware.rate_limit import limiter
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
+
+
+class SetupRequest(BaseModel):
+    username: str = Field(..., min_length=3, max_length=50)
+    password: str = Field(..., min_length=12)
+    email: str | None = None
+
+
+@router.get("/setup-status")
+def setup_status(db: Session = Depends(get_db)):
+    """Public endpoint: returns whether the platform still needs initial setup.
+
+    Used by the frontend on first paint to decide between the setup wizard
+    and the regular login screen.
+    """
+    return {"setup_required": db.query(User).count() == 0}
+
+
+@router.post("/setup", response_model=TokenResponse)
+@limiter.limit("3/minute")
+def setup(request: Request, data: SetupRequest, db: Session = Depends(get_db)):
+    """Create the initial admin account.
+
+    Only callable while the database has zero users — once the first admin
+    exists, this endpoint refuses every subsequent call. The created admin
+    is fully ready (no forced password change, since the user just chose it).
+    """
+    if db.query(User).count() > 0:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Setup already completed",
+        )
+
+    admin = User(
+        username=data.username,
+        email=data.email,
+        hashed_password=hash_password(data.password),
+        role="admin",
+        is_active=True,
+        must_change_password=False,
+        last_login_at=datetime.now(timezone.utc),
+    )
+    db.add(admin)
+    db.commit()
+    db.refresh(admin)
+
+    token = create_access_token(admin.id, admin.username)
+    return TokenResponse(
+        access_token=token,
+        user=UserResponse.model_validate(admin),
+    )
 
 
 @router.post("/login", response_model=TokenResponse)

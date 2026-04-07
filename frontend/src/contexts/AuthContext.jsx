@@ -5,7 +5,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import {
   getStoredToken, getStoredUser, clearAuth, storeUser,
-  login as apiLogin, fetchMe,
+  login as apiLogin, fetchMe, fetchSetupStatus, setupAdmin as apiSetupAdmin,
 } from '../services/authService';
 
 const AuthContext = createContext(null);
@@ -15,39 +15,54 @@ export function AuthProvider({ children }) {
   const [token, setToken] = useState(getStoredToken);
   const [loading, setLoading] = useState(true);
   const [backendUnreachable, setBackendUnreachable] = useState(false);
+  const [setupRequired, setSetupRequired] = useState(false);
 
-  // On mount: if we have a token, validate it by fetching /auth/me.
-  // We never assume "no auth required" — auth is always required now.
+  // On mount: check whether the platform needs initial setup, then validate
+  // any stored token by fetching /auth/me.
   useEffect(() => {
     let cancelled = false;
 
-    if (!token) {
-      setLoading(false);
-      return;
-    }
-
-    fetchMe()
-      .then((freshUser) => {
+    (async () => {
+      try {
+        const { setup_required } = await fetchSetupStatus();
         if (cancelled) return;
-        setUser(freshUser);
-        storeUser(freshUser);
+        setSetupRequired(setup_required);
         setBackendUnreachable(false);
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        // 401 → clear stale token and let the user re-login.
-        if (err?.response?.status === 401) {
-          clearAuth();
-          setToken(null);
-          setUser(null);
-        } else {
-          // Network/5xx → don't bypass auth, surface the error instead.
-          setBackendUnreachable(true);
+
+        if (setup_required) {
+          // No accounts yet — skip token validation, render setup wizard.
+          setLoading(false);
+          return;
         }
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+
+        if (!token) {
+          setLoading(false);
+          return;
+        }
+
+        try {
+          const freshUser = await fetchMe();
+          if (cancelled) return;
+          setUser(freshUser);
+          storeUser(freshUser);
+        } catch (err) {
+          if (cancelled) return;
+          if (err?.response?.status === 401) {
+            clearAuth();
+            setToken(null);
+            setUser(null);
+          } else {
+            setBackendUnreachable(true);
+          }
+        } finally {
+          if (!cancelled) setLoading(false);
+        }
+      } catch {
+        if (cancelled) return;
+        setBackendUnreachable(true);
+        setLoading(false);
+      }
+    })();
 
     return () => { cancelled = true; };
   }, [token]);
@@ -56,6 +71,15 @@ export function AuthProvider({ children }) {
     const result = await apiLogin(username, password);
     setToken(result.token);
     setUser(result.user);
+    setBackendUnreachable(false);
+    return result;
+  }, []);
+
+  const completeSetup = useCallback(async (username, password, email) => {
+    const result = await apiSetupAdmin(username, password, email);
+    setToken(result.token);
+    setUser(result.user);
+    setSetupRequired(false);
     setBackendUnreachable(false);
     return result;
   }, []);
@@ -79,8 +103,9 @@ export function AuthProvider({ children }) {
       user, token, loading,
       isAuthenticated,
       mustChangePassword,
+      setupRequired,
       backendUnreachable,
-      login, logout, refreshUser,
+      login, logout, refreshUser, completeSetup,
     }}>
       {children}
     </AuthContext.Provider>

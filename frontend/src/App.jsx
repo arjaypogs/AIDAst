@@ -12,6 +12,7 @@ import Settings from './pages/Settings';
 import Users from './pages/Users';
 import Login from './pages/Login';
 import ChangePassword from './pages/ChangePassword';
+import Setup from './pages/Setup';
 import useCommandNotifications from './hooks/useCommandNotifications';
 import CommandApprovalToast from './components/common/CommandApprovalBanner';
 
@@ -22,7 +23,7 @@ function NotificationHandler() {
 }
 
 function AuthGate({ children }) {
-  const { isAuthenticated, loading, mustChangePassword } = useAuth();
+  const { isAuthenticated, loading, mustChangePassword, setupRequired } = useAuth();
 
   if (loading) {
     return (
@@ -30,6 +31,10 @@ function AuthGate({ children }) {
         <div className="text-neutral-500 dark:text-neutral-400">Loading...</div>
       </div>
     );
+  }
+
+  if (setupRequired) {
+    return <Setup />;
   }
 
   if (!isAuthenticated) {

@@ -36,6 +36,20 @@ export async function login(username, password) {
   return { token: access_token, user };
 }
 
+export async function fetchSetupStatus() {
+  const res = await apiClient.get('/auth/setup-status');
+  return res.data; // { setup_required: bool }
+}
+
+export async function setupAdmin(username, password, email) {
+  const body = { username, password };
+  if (email) body.email = email;
+  const res = await apiClient.post('/auth/setup', body);
+  const { access_token, user } = res.data;
+  storeAuth(access_token, user);
+  return { token: access_token, user };
+}
+
 export async function fetchMe() {
   const res = await apiClient.get('/auth/me');
   return res.data;
