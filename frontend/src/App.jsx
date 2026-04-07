@@ -9,6 +9,7 @@ import Assessments from './pages/Assessments';
 import AssessmentDetail from './pages/AssessmentDetail';
 import Commands from './pages/Commands';
 import Settings from './pages/Settings';
+import Users from './pages/Users';
 import Login from './pages/Login';
 import ChangePassword from './pages/ChangePassword';
 import useCommandNotifications from './hooks/useCommandNotifications';
@@ -58,6 +59,7 @@ function App() {
                     <Route path="assessments" element={<Assessments />} />
                     <Route path="assessments/:id" element={<AssessmentDetail />} />
                     <Route path="commands" element={<Commands />} />
+                    <Route path="users" element={<Users />} />
                     <Route path="settings" element={<Settings />} />
                   </Route>
                 </Routes>

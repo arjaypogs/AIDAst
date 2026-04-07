@@ -4,11 +4,11 @@ Main FastAPI application
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from auth import get_current_user
+from auth import get_current_user, require_admin
 from config import settings
 from database import init_db
 from bootstrap_admin import bootstrap_admin
-from api import assessments, cards, recon, sections, containers, folders, global_commands, search, system, credentials, websocket, workspace, pending_commands, context_documents, source_code, auth, reports, timeline, notifications, templates
+from api import assessments, cards, recon, sections, containers, folders, global_commands, search, system, credentials, websocket, workspace, pending_commands, context_documents, source_code, auth, reports, timeline, notifications, templates, users
 from api import commands
 from api.commands import global_router as commands_global_router
 from utils.logger import setup_logging, get_logger
@@ -86,6 +86,13 @@ app.include_router(reports.router, prefix=settings.API_V1_PREFIX, dependencies=p
 app.include_router(timeline.router, prefix=settings.API_V1_PREFIX, dependencies=protected)
 app.include_router(notifications.router, prefix=settings.API_V1_PREFIX, dependencies=protected)
 app.include_router(templates.router, prefix=settings.API_V1_PREFIX, dependencies=protected)
+
+# Admin-only router
+app.include_router(
+    users.router,
+    prefix=settings.API_V1_PREFIX,
+    dependencies=[Depends(require_admin)],
+)
 
 
 @app.on_event("startup")
