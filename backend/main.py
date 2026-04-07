@@ -6,6 +6,8 @@ Main FastAPI application
 from bootstrap_secrets import ensure_secret_key
 ensure_secret_key()
 
+from contextlib import asynccontextmanager
+
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -34,11 +36,29 @@ setup_logging(
 
 logger = get_logger(__name__)
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifecycle: run migrations on startup, nothing on shutdown."""
+    init_db()
+    logger.info(
+        "Application started",
+        project=settings.PROJECT_NAME,
+        version=settings.VERSION,
+        database=settings.DATABASE_URL.split("@")[-1],
+        workspace=settings.CONTAINER_WORKSPACE_BASE,
+        log_level=settings.LOG_LEVEL,
+        log_format=settings.LOG_FORMAT,
+        cors_origins=settings.BACKEND_CORS_ORIGINS,
+    )
+    yield
+
+
 # Create FastAPI app
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
-    description=settings.PROJECT_TAGLINE
+    description=settings.PROJECT_TAGLINE,
+    lifespan=lifespan,
 )
 
 # Rate limiting
@@ -97,21 +117,6 @@ app.include_router(
     prefix=settings.API_V1_PREFIX,
     dependencies=[Depends(require_admin)],
 )
-
-
-@app.on_event("startup")
-async def startup_event():
-    """Initialize database on startup"""
-    init_db()
-    logger.info(
-        "Application started",
-        project=settings.PROJECT_NAME,
-        version=settings.VERSION,
-        database=settings.DATABASE_URL.split("@")[-1],  # Hide credentials
-        workspace=settings.CONTAINER_WORKSPACE_BASE,
-        log_level=settings.LOG_LEVEL,
-        log_format=settings.LOG_FORMAT
-    )
 
 
 @app.get("/")
