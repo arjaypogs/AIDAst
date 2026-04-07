@@ -25,8 +25,8 @@ export default function ChangePassword() {
       setError('New password and confirmation do not match');
       return;
     }
-    if (newPassword.length < 12) {
-      setError('New password must be at least 12 characters');
+    if (newPassword.length < 7) {
+      setError('New password must be at least 7 characters');
       return;
     }
     if (newPassword === currentPassword) {
@@ -78,7 +78,7 @@ export default function ChangePassword() {
               autoFocus
             />
             <PasswordField
-              label="New password (min 12 chars)"
+              label="New password (min 7 chars)"
               value={newPassword}
               onChange={setNewPassword}
             />

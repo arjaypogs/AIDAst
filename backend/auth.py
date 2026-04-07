@@ -31,7 +31,7 @@ security = HTTPBearer(auto_error=False)
 
 class UserCreate(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
-    password: str = Field(..., min_length=12)
+    password: str = Field(..., min_length=7)
     email: Optional[str] = None
     role: str = Field("user", pattern="^(admin|user)$")
 
@@ -43,7 +43,7 @@ class UserLogin(BaseModel):
 
 class PasswordChangeRequest(BaseModel):
     current_password: str
-    new_password: str = Field(..., min_length=12)
+    new_password: str = Field(..., min_length=7)
 
 
 class UserResponse(BaseModel):

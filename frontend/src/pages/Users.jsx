@@ -202,8 +202,8 @@ function CreateUserModal({ onClose, onCreated }) {
         <Field label="Email (optional)">
           <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-blue-500 outline-none" />
         </Field>
-        <Field label="Initial password (min 12 chars)">
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={12} className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-blue-500 outline-none" />
+        <Field label="Initial password (min 7 chars)">
+          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={7} className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-blue-500 outline-none" />
         </Field>
         <Field label="Role">
           <select value={role} onChange={(e) => setRole(e.target.value)} className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-blue-500 outline-none">
@@ -246,8 +246,8 @@ function ResetPasswordModal({ user, onClose, onDone }) {
     <ModalShell title={`Reset password — ${user.username}`} onClose={onClose}>
       <form onSubmit={handleSubmit} className="space-y-3">
         {error && <div className="p-2 text-sm bg-red-50 text-red-700 rounded">{error}</div>}
-        <Field label="New password (min 12 chars)">
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={12} className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-blue-500 outline-none" autoFocus />
+        <Field label="New password (min 7 chars)">
+          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={7} className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-blue-500 outline-none" autoFocus />
         </Field>
         <p className="text-xs text-neutral-500">User will be required to change it on next login.</p>
         <div className="flex gap-2 justify-end pt-2">

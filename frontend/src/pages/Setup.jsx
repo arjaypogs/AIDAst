@@ -27,8 +27,8 @@ export default function Setup() {
       setError('Password and confirmation do not match');
       return;
     }
-    if (password.length < 12) {
-      setError('Password must be at least 12 characters');
+    if (password.length < 7) {
+      setError('Password must be at least 7 characters');
       return;
     }
 
@@ -93,13 +93,13 @@ export default function Setup() {
               />
             </Field>
 
-            <Field label="Password (min 12 characters)" icon={<Lock className="w-4 h-4" />}>
+            <Field label="Password (min 7 characters)" icon={<Lock className="w-4 h-4" />}>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                minLength={12}
+                minLength={7}
                 className="w-full pl-10 pr-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
               />
             </Field>
@@ -110,7 +110,7 @@ export default function Setup() {
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
                 required
-                minLength={12}
+                minLength={7}
                 className="w-full pl-10 pr-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
               />
             </Field>

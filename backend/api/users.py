@@ -23,7 +23,7 @@ class UserUpdate(BaseModel):
 
 
 class PasswordResetRequest(BaseModel):
-    new_password: str = Field(..., min_length=12)
+    new_password: str = Field(..., min_length=7)
 
 
 def _admin_count(db: Session) -> int:
