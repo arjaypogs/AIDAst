@@ -174,6 +174,39 @@ def upgrade() -> None:
         sa.Column('created_at', sa.TIMESTAMP(), server_default=sa.text('now()')),
     )
 
+    # --- timeline_events (FK -> assessments, command_history, cards, recon_data) ---
+    op.create_table(
+        'timeline_events',
+        sa.Column('id', sa.Integer(), primary_key=True, autoincrement=True),
+        sa.Column('assessment_id', sa.Integer(), sa.ForeignKey('assessments.id', ondelete='CASCADE'), nullable=False, index=True),
+        sa.Column('phase', sa.String(50), nullable=False, index=True),
+        sa.Column('event_type', sa.String(50), nullable=False),
+        sa.Column('title', sa.String(255), nullable=False),
+        sa.Column('description', sa.Text(), nullable=True),
+        sa.Column('command_id', sa.Integer(), sa.ForeignKey('command_history.id', ondelete='SET NULL'), nullable=True),
+        sa.Column('card_id', sa.Integer(), sa.ForeignKey('cards.id', ondelete='SET NULL'), nullable=True),
+        sa.Column('recon_id', sa.Integer(), sa.ForeignKey('recon_data.id', ondelete='SET NULL'), nullable=True),
+        sa.Column('severity', sa.String(20), nullable=True),
+        sa.Column('icon', sa.String(50), nullable=True),
+        sa.Column('tags', sa.Text(), nullable=True),
+        sa.Column('created_at', sa.TIMESTAMP(), server_default=sa.text('now()')),
+    )
+
+    # --- notification_configs (no FK deps) ---
+    op.create_table(
+        'notification_configs',
+        sa.Column('id', sa.Integer(), primary_key=True, autoincrement=True),
+        sa.Column('channel', sa.String(50), nullable=False, unique=True),
+        sa.Column('enabled', sa.Boolean(), server_default=sa.text('false')),
+        sa.Column('config', postgresql.JSONB(), nullable=True),
+        sa.Column('on_critical_finding', sa.Boolean(), server_default=sa.text('true')),
+        sa.Column('on_high_finding', sa.Boolean(), server_default=sa.text('true')),
+        sa.Column('on_scan_complete', sa.Boolean(), server_default=sa.text('false')),
+        sa.Column('on_assessment_complete', sa.Boolean(), server_default=sa.text('false')),
+        sa.Column('created_at', sa.TIMESTAMP(), server_default=sa.text('now()')),
+        sa.Column('updated_at', sa.TIMESTAMP(), server_default=sa.text('now()')),
+    )
+
     # --- pending_commands (FK -> assessments CASCADE) ---
     op.create_table(
         'pending_commands',
@@ -195,6 +228,8 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.drop_table('pending_commands')
+    op.drop_table('notification_configs')
+    op.drop_table('timeline_events')
     op.drop_table('custom_tables')
     op.drop_table('credentials')
     op.drop_table('assessment_sections')
