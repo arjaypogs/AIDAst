@@ -91,9 +91,9 @@ check_port() {
 }
 
 PORT_CONFLICT=false
-check_port 5434 "PostgreSQL" || PORT_CONFLICT=true
-check_port 8001 "Backend"    || PORT_CONFLICT=true
-check_port 5174 "Frontend"   || PORT_CONFLICT=true
+check_port 5432 "PostgreSQL" || PORT_CONFLICT=true
+check_port 8000 "Backend"    || PORT_CONFLICT=true
+check_port 5173 "Frontend"   || PORT_CONFLICT=true
 
 if [[ "$PORT_CONFLICT" == "true" ]]; then
     echo ""
@@ -120,8 +120,8 @@ if [[ "$CONTAINERS_RUNNING" -ge 3 ]] && [[ "$FORCE_BUILD" == "false" ]]; then
     echo ""
     $COMPOSE_CMD ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
     echo ""
-    log "Frontend: http://localhost:5174"
-    log "Backend:  http://localhost:8001"
+    log "Frontend: http://localhost:5173"
+    log "Backend:  http://localhost:8000"
     echo ""
     warn "Use --build to force rebuild, or ./restart.sh to restart"
     exit 0
@@ -142,7 +142,7 @@ if [[ ! -f backend/.env ]]; then
 fi
 
 if [[ ! -f frontend/.env ]]; then
-    echo "VITE_API_URL=http://localhost:8001/api" > frontend/.env
+    echo "VITE_API_URL=http://localhost:8000/api" > frontend/.env
     log "Created frontend/.env"
 fi
 
@@ -328,8 +328,8 @@ wait_for_service() {
 }
 
 wait_for_service "PostgreSQL" "$COMPOSE_CMD exec -T postgres pg_isready -U aida"
-wait_for_service "Backend" "curl -sf http://localhost:8001/health"
-wait_for_service "Frontend" "curl -sf http://localhost:5174"
+wait_for_service "Backend" "curl -sf http://localhost:8000/health"
+wait_for_service "Frontend" "curl -sf http://localhost:5173"
 
 # ==============================================================================
 # FOLDER OPENER (Background helper)
@@ -371,9 +371,9 @@ fi
 section "AIDA Ready"
 
 echo ""
-log "Frontend:  http://localhost:5174"
-log "Backend:   http://localhost:8001"
-log "API Docs:  http://localhost:8001/docs"
+log "Frontend:  http://localhost:5173"
+log "Backend:   http://localhost:8000"
+log "API Docs:  http://localhost:8000/docs"
 echo ""
 $COMPOSE_CMD ps --format "table {{.Name}}\t{{.Status}}"
 echo ""

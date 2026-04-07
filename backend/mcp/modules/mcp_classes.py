@@ -28,7 +28,7 @@ class AidaMCPService:
     def __init__(self, backend_url: str = None):
         # Load backend URL from environment or use default
         import os
-        self.backend_url = backend_url or os.getenv("BACKEND_API_URL", "http://localhost:8001/api")
+        self.backend_url = backend_url or os.getenv("BACKEND_API_URL", "http://localhost:8000/api")
         self.current_assessment_id: Optional[int] = None
         self.current_assessment_name: Optional[str] = None
         self.http_client: Optional[httpx.AsyncClient] = None

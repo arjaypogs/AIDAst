@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     POSTGRES_PASSWORD: str = "aida"
     POSTGRES_DB: str = "aida_assessments"
     POSTGRES_HOST: str = "localhost"
-    POSTGRES_PORT: str = "5434"
+    POSTGRES_PORT: str = "5432"
 
     # Database URL (will be constructed in validator if not provided)
     DATABASE_URL: Optional[str] = None
@@ -49,7 +49,7 @@ class Settings(BaseSettings):
     LOG_FILE_BACKUP_COUNT: int = 5
 
     # Backend API URL (for MCP server)
-    BACKEND_API_URL: str = "http://localhost:8001/api"
+    BACKEND_API_URL: str = "http://localhost:8000/api"
 
     # Authentication (JWT)
     SECRET_KEY: str = "aida-test-secret-key-change-in-production-min-32-chars!"
@@ -70,7 +70,7 @@ class Settings(BaseSettings):
         user = os.getenv("POSTGRES_USER", "aida")
         password = os.getenv("POSTGRES_PASSWORD", "aida")
         host = os.getenv("POSTGRES_HOST", "localhost")
-        port = os.getenv("POSTGRES_PORT", "5434")
+        port = os.getenv("POSTGRES_PORT", "5432")
         db = os.getenv("POSTGRES_DB", "aida_assessments")
 
         return f"postgresql://{user}:{password}@{host}:{port}/{db}"

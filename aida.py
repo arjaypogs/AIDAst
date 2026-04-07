@@ -97,7 +97,7 @@ KIMI_SYSTEM_PROMPT_FILE = AIDA_CONFIG_DIR / "kimi-system.md"
 
 DEFAULT_MODEL = "claude-sonnet-4-5"
 DEFAULT_PERMISSION = "default"
-DEFAULT_BACKEND = "http://localhost:8001/api"
+DEFAULT_BACKEND = "http://localhost:8000/api"
 
 # CLI types
 CLIType = Literal["claude", "kimi"]
@@ -331,7 +331,7 @@ def resolve_workspace(assessment_name: str, backend_url: str) -> Optional[dict]:
             console.print("[yellow]Troubleshooting:[/yellow]")
             console.print("  1. Check: [cyan]docker-compose ps[/cyan]")
             console.print("  2. Start: [cyan]docker-compose up -d[/cyan]")
-            console.print("  3. Test:  [cyan]curl http://localhost:8001/health[/cyan]\n")
+            console.print("  3. Test:  [cyan]curl http://localhost:8000/health[/cyan]\n")
             sys.exit(1)
 
         except (httpx.ReadError, httpx.WriteError, httpx.PoolTimeout, httpx.ConnectTimeout, httpx.ReadTimeout) as e:
@@ -426,7 +426,7 @@ def main(assessment, model, permission_mode, preprompt, base_url, api_key, no_mc
     
     permission_mode = permission_mode or os.getenv("AIDA_PERMISSION_MODE", DEFAULT_PERMISSION)
     backend_url = os.getenv("BACKEND_API_URL", DEFAULT_BACKEND)
-    db_url = os.getenv("DATABASE_URL", "postgresql://aida:aida@localhost:5434/aida_assessments")
+    db_url = os.getenv("DATABASE_URL", "postgresql://aida:aida@localhost:5432/aida_assessments")
     
     # Interactive assessment selection if none provided
     if not assessment:
@@ -448,7 +448,7 @@ def main(assessment, model, permission_mode, preprompt, base_url, api_key, no_mc
                 if not assessments:
                     console.print("[yellow]No assessments found![/yellow]\n")
                     console.print("Create your first assessment:")
-                    console.print("  → Open [link=http://localhost:5174]http://localhost:5174[/link]")
+                    console.print("  → Open [link=http://localhost:5173]http://localhost:5173[/link]")
                     console.print('  → Click "New Assessment"\n')
                     sys.exit(1)
                 

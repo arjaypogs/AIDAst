@@ -10,7 +10,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-aida}
       POSTGRES_DB: ${POSTGRES_DB:-aida_assessments}
     ports:
-      - "${POSTGRES_PORT:-5434}:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -35,7 +35,7 @@ services:
       POSTGRES_HOST: ${DB_HOST:-postgres}
       POSTGRES_DB: ${DB_NAME:-aida_assessments}
     ports:
-      - "8001:8000"
+      - "8000:8000"
     volumes:
       # Mount source code for hot reload (exclude venv to avoid conflicts)
       # :z flag enables SELinux compatibility (RHEL/Fedora)
@@ -67,9 +67,9 @@ services:
     container_name: aida_test_frontend
     environment:
       # Frontend talks to backend via localhost (browser runs on host)
-      VITE_API_URL: http://localhost:8001/api
+      VITE_API_URL: http://localhost:8000/api
     ports:
-      - "5174:5173"
+      - "5173:5173"
     volumes:
       # Mount source code for hot reload (exclude node_modules to avoid conflicts)
       # :z flag enables SELinux compatibility (RHEL/Fedora)

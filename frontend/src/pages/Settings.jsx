@@ -1685,7 +1685,7 @@ const Settings = () => {
                 </a>
 
                 <a
-                  href="http://localhost:8001/docs"
+                  href="http://localhost:8000/docs"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="p-3 flex items-center justify-between hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-colors"
@@ -1698,7 +1698,7 @@ const Settings = () => {
                 </a>
 
                 <a
-                  href="http://localhost:8001/redoc"
+                  href="http://localhost:8000/redoc"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="p-3 flex items-center justify-between hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-colors"

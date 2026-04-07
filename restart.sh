@@ -78,8 +78,8 @@ wait_for_service() {
 }
 
 wait_for_service "PostgreSQL" "$COMPOSE_CMD exec -T postgres pg_isready -U aida"
-wait_for_service "Backend" "curl -sf http://localhost:8001/health"
-wait_for_service "Frontend" "curl -sf http://localhost:5174"
+wait_for_service "Backend" "curl -sf http://localhost:8000/health"
+wait_for_service "Frontend" "curl -sf http://localhost:5173"
 
 # Success
 section "AIDA Restarted"
@@ -87,6 +87,6 @@ section "AIDA Restarted"
 echo ""
 $COMPOSE_CMD ps --format "table {{.Name}}\t{{.Status}}"
 echo ""
-log "Frontend:  http://localhost:5174"
-log "Backend:   http://localhost:8001"
+log "Frontend:  http://localhost:5173"
+log "Backend:   http://localhost:8000"
 echo ""
