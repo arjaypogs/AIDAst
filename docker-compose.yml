@@ -10,7 +10,11 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-aida}
       POSTGRES_DB: ${POSTGRES_DB:-aida_assessments}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      # Bind to localhost only — the database must never be reachable from
+      # the LAN. The backend talks to postgres over the internal docker
+      # network, so this mapping only exists for host-side dev tools (psql,
+      # pgAdmin, DBeaver). Remove the line entirely to lock it down further.
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -35,7 +39,8 @@ services:
       POSTGRES_HOST: ${DB_HOST:-postgres}
       POSTGRES_DB: ${DB_NAME:-aida_assessments}
     ports:
-      - "8000:8000"
+      # Bind to localhost only — the API must not be reachable from the LAN.
+      - "127.0.0.1:8000:8000"
     volumes:
       # Mount source code for hot reload (exclude venv to avoid conflicts)
       # :z flag enables SELinux compatibility (RHEL/Fedora)
@@ -69,7 +74,8 @@ services:
       # Frontend talks to backend via localhost (browser runs on host)
       VITE_API_URL: http://localhost:8000/api
     ports:
-      - "5173:5173"
+      # Bind to localhost only — the dev server must not be reachable from the LAN.
+      - "127.0.0.1:5173:5173"
     volumes:
       # Mount source code for hot reload (exclude node_modules to avoid conflicts)
       # :z flag enables SELinux compatibility (RHEL/Fedora)
@@ -81,7 +87,7 @@ services:
       - backend
     restart: unless-stopped
     healthcheck:
-      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5173" ]
+      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:5173" ]
       interval: 30s
       timeout: 10s
       retries: 3

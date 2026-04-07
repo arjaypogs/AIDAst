@@ -27,9 +27,10 @@ class Settings(BaseSettings):
     # Database URL (will be constructed in validator if not provided)
     DATABASE_URL: Optional[str] = None
 
-    # CORS - Allow all origins for development (use specific origins in production)
-    # For production, set BACKEND_CORS_ORIGINS in .env to specific origins
-    BACKEND_CORS_ORIGINS: str = "*"
+    # CORS — explicit list of allowed origins. The wildcard "*" is rejected
+    # at startup because it is incompatible with allow_credentials=True per
+    # the CORS spec (browsers silently drop the response).
+    BACKEND_CORS_ORIGINS: str = "http://localhost:5173,http://127.0.0.1:5173"
 
     # Container Configuration
     CONTAINER_WORKSPACE_BASE: str = "/workspace"
@@ -50,6 +51,10 @@ class Settings(BaseSettings):
 
     # Backend API URL (for MCP server)
     BACKEND_API_URL: str = "http://localhost:8000/api"
+
+    # Authentication (JWT)
+    SECRET_KEY: str = "aida-secret-key-change-in-production-min-32-chars!"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
 
     # Environment
     ENVIRONMENT: str = "development"
@@ -73,14 +78,25 @@ class Settings(BaseSettings):
 
     @field_validator('BACKEND_CORS_ORIGINS', mode='after')
     @classmethod
-    def parse_cors_origins(cls, v: str) -> list[str]:
-        """Parse CORS origins from comma-separated string to list"""
+    def parse_cors_origins(cls, v) -> list[str]:
+        """Parse CORS origins from a comma-separated string to a list.
+
+        Wildcard "*" is rejected: combined with allow_credentials=True it
+        violates the CORS spec and browsers refuse to send credentials.
+        """
         if isinstance(v, list):
-            return v
-        # Handle wildcard
-        if v.strip() == "*":
-            return ["*"]
-        return [origin.strip() for origin in v.split(",") if origin.strip()]
+            origins = v
+        else:
+            if v.strip() == "*":
+                raise ValueError(
+                    'BACKEND_CORS_ORIGINS="*" is not allowed with credentials. '
+                    'Set an explicit comma-separated list, e.g. '
+                    '"http://localhost:5173,http://127.0.0.1:5173".'
+                )
+            origins = [origin.strip() for origin in v.split(",") if origin.strip()]
+        if not origins:
+            raise ValueError("BACKEND_CORS_ORIGINS must contain at least one origin")
+        return origins
 
     @field_validator('LOG_FILE_ENABLED', 'LOG_CONSOLE_ENABLED', 'DEBUG', mode='before')
     @classmethod

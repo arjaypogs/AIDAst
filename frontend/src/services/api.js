@@ -13,10 +13,13 @@ const apiClient = axios.create({
   },
 });
 
-// Request interceptor
+// Request interceptor - attach JWT token
 apiClient.interceptors.request.use(
   (config) => {
-    // Add any auth tokens here if needed in the future
+    const token = localStorage.getItem('aida_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
     return config;
   },
   (error) => {
@@ -24,11 +27,24 @@ apiClient.interceptors.request.use(
   }
 );
 
-// Response interceptor
+// Response interceptor — handle 401 (expired/invalid token).
+// We must NEVER call window.location.reload() here: a reload would re-mount
+// every context, which would re-fire the same protected requests, which would
+// 401 again, which would reload again — an infinite loop. Instead we clear the
+// stored auth and emit an event so AuthContext can transition to <Login />
+// without unmounting the React tree.
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Handle errors globally
+    if (error.response?.status === 401) {
+      const url = error.config?.url || '';
+      const isAuthEndpoint = url.includes('/auth/');
+      if (!isAuthEndpoint && localStorage.getItem('aida_token')) {
+        localStorage.removeItem('aida_token');
+        localStorage.removeItem('aida_user');
+        window.dispatchEvent(new CustomEvent('aida:auth-cleared'));
+      }
+    }
     const message = error.response?.data?.detail || error.message || 'An error occurred';
     console.error('API Error:', message);
     return Promise.reject(error);

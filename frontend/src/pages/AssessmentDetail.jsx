@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Target, Server, Shield, ArrowLeft, AlertTriangle, Info, Eye, TrendingUp, Filter, FolderOpen, RefreshCw, FileText, Plus } from '../components/icons';
+import { Target, Server, Shield, ArrowLeft, AlertTriangle, Info, Eye, TrendingUp, Filter, FolderOpen, RefreshCw, FileText, Download, Send, Play, Copy, Check, Plus } from '../components/icons';
 import apiClient from '../services/api';
 import workspaceService from '../services/workspaceService';
 import EditableField from '../components/common/EditableField';
@@ -12,6 +12,8 @@ import CommandHistoryRefactored from '../components/assessment/CommandHistoryRef
 import ImportScanModal from '../components/assessment/ImportScanModal';
 import CredentialsManager from '../components/assessment/CredentialsManager';
 import ContextDocumentsPanel from '../components/assessment/ContextDocumentsPanel';
+import AttackTimeline from '../components/assessment/AttackTimeline';
+import SendReportModal from '../components/assessment/SendReportModal';
 
 import ChangeContainerModal from '../components/workspace/ChangeContainerModal';
 import MarkdownDocumentsModal from '../components/assessment/MarkdownDocumentsModal';
@@ -52,6 +54,12 @@ const AssessmentDetail = () => {
   const [openingWorkspace, setOpeningWorkspace] = useState(false);
   const [showChangeContainerModal, setShowChangeContainerModal] = useState(false);
   const [showMarkdownModal, setShowMarkdownModal] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
+  const [showSendReport, setShowSendReport] = useState(false);
+  const [showStartAI, setShowStartAI] = useState(false);
+  const [copiedCmd, setCopiedCmd] = useState(false);
+  const [launchingAI, setLaunchingAI] = useState(false);
+  const [launchResult, setLaunchResult] = useState(null);
 
   // WebSocket connection for real-time updates
   const { subscribe, isConnected } = useWebSocket(id);
@@ -183,6 +191,28 @@ const AssessmentDetail = () => {
     }
   };
 
+  const handleExportPdf = async () => {
+    setExportingPdf(true);
+    try {
+      const response = await apiClient.get(`/assessments/${id}/report/pdf`, {
+        responseType: 'blob',
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `AIDA_Report_${assessment.name.replace(/[^a-zA-Z0-9 _-]/g, '_')}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('PDF export failed:', err);
+      alert('Failed to generate PDF report. Check console for details.');
+    } finally {
+      setExportingPdf(false);
+    }
+  };
+
   const handleOpenWorkspace = async () => {
     if (!assessment.workspace_path) {
       alert('No workspace created for this assessment yet.');
@@ -198,7 +228,7 @@ const AssessmentDetail = () => {
       if (result.success && result.host_path) {
         // Try to open via local folder opener service (runs on host)
         try {
-          const { openFolderOnHost } = await import('../services/folderOpenerService');
+          const { openFolderOnHost } = await import('../services/hostHelperService');
           const openResult = await openFolderOnHost(result.host_path);
           if (openResult.success) {
             return; // Success!
@@ -415,6 +445,130 @@ const AssessmentDetail = () => {
             <FileText className="w-3.5 h-3.5" />
             <span>Docs</span>
           </button>
+          <button
+            onClick={handleExportPdf}
+            disabled={exportingPdf}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-neutral-700 dark:text-neutral-300 bg-neutral-50 dark:bg-neutral-700/50 border border-neutral-200 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-700 hover:border-neutral-300 dark:hover:border-neutral-500 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Export PDF report"
+          >
+            {exportingPdf ? (
+              <>
+                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                <span>Generating...</span>
+              </>
+            ) : (
+              <>
+                <Download className="w-3.5 h-3.5" />
+                <span>PDF</span>
+              </>
+            )}
+          </button>
+          <button
+            onClick={() => setShowSendReport(true)}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-neutral-700 dark:text-neutral-300 bg-neutral-50 dark:bg-neutral-700/50 border border-neutral-200 dark:border-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-700 hover:border-neutral-300 dark:hover:border-neutral-500 rounded-md transition-colors"
+            title="Send report via Telegram, Slack, or Email"
+          >
+            <Send className="w-3.5 h-3.5" />
+            <span>Send</span>
+          </button>
+          <div className="relative">
+            <button
+              onClick={() => {
+                // Clear any stale result from a previous open so the popup
+                // always starts fresh — otherwise reopening after a success
+                // shows the old success banner with no launch button.
+                if (!showStartAI) setLaunchResult(null);
+                setShowStartAI(!showStartAI);
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-primary-600 hover:bg-primary-700 border border-primary-600 rounded-md transition-colors"
+              title="Start AI-driven scan"
+            >
+              <Play className="w-3.5 h-3.5" />
+              <span>Start AI</span>
+            </button>
+            {showStartAI && (
+              <div className="absolute right-0 top-full mt-2 w-96 bg-white dark:bg-neutral-800 rounded-lg shadow-xl border border-neutral-200 dark:border-neutral-700 p-4 z-50">
+                <h4 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Launch AI Scan</h4>
+
+                {launchResult?.type === 'success' ? (
+                  /* Success state — only show confirmation */
+                  <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-sm">
+                    <Check className="w-4 h-4 flex-shrink-0" />
+                    <span>Terminal opened with AI scan</span>
+                  </div>
+                ) : (
+                  <>
+                    {/* Launch button */}
+                    <button
+                      onClick={async () => {
+                        setLaunchingAI(true);
+                        setLaunchResult(null);
+                        try {
+                          const resp = await fetch('http://localhost:9876/launch', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ assessment_name: assessment.name }),
+                          });
+                          const data = await resp.json();
+                          setLaunchResult(data.success ? { type: 'success', text: 'Terminal opened with AI scan!' } : { type: 'error', text: data.error || 'Failed to launch' });
+                        } catch (e) {
+                          setLaunchResult({ type: 'error', text: 'Host helper not running. Use the command below instead.' });
+                        } finally {
+                          setLaunchingAI(false);
+                        }
+                      }}
+                      disabled={launchingAI}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                    >
+                      <Play className="w-4 h-4" />
+                      {launchingAI ? 'Opening terminal...' : 'Open in Terminal'}
+                    </button>
+
+                    {launchResult?.type === 'error' && (
+                      <div className="mt-2 flex items-start gap-1.5 px-2.5 py-1.5 rounded text-xs bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400">
+                        <AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                        <span>{launchResult.text}</span>
+                      </div>
+                    )}
+
+                    {/* Fallback: copy command */}
+                    <div className="mt-3 pt-3 border-t border-neutral-200 dark:border-neutral-700">
+                      <p className="text-[10px] text-neutral-500 dark:text-neutral-400 mb-1.5">Or run manually:</p>
+                      <div className="relative">
+                        <pre className="text-[11px] font-mono bg-neutral-900 text-green-400 px-3 py-2 rounded-lg overflow-x-auto">python3 aida.py -a "{assessment.name}"</pre>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(`python3 aida.py -a "${assessment.name}"`);
+                            setCopiedCmd(true);
+                            setTimeout(() => setCopiedCmd(false), 2000);
+                          }}
+                          className="absolute top-1 right-1 p-1 rounded bg-neutral-700 hover:bg-neutral-600"
+                        >
+                          {copiedCmd ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3 text-neutral-400" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* External MCP clients notice */}
+                    <div className="mt-3 pt-3 border-t border-neutral-200 dark:border-neutral-700 flex items-start gap-1.5 text-[10px] text-neutral-500 dark:text-neutral-400">
+                      <Info className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                      <span>
+                        <strong>External MCP clients</strong> (Claude Desktop, Cursor, etc.) require running <code className="font-mono">aida.py</code> once first to authenticate and cache the API key.
+                      </span>
+                    </div>
+
+                    <div className="mt-2 text-[10px] text-neutral-500 dark:text-neutral-400">
+                      Commands requiring approval will appear in the <strong>Commands</strong> page.
+                    </div>
+                  </>
+                )}
+
+                <button onClick={() => { setShowStartAI(false); setLaunchResult(null); }} className="mt-3 w-full text-xs text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300">
+                  Close
+                </button>
+              </div>
+            )}
+          </div>
           <span className={`px-2 py-1 rounded-full text-xs font-medium ${assessment.status === 'in_progress'
             ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
             : assessment.status === 'completed'
@@ -864,6 +1018,22 @@ const AssessmentDetail = () => {
           <CommandHistoryRefactored commands={commands} />
         </div>
       </div>
+      {/* Attack Timeline */}
+      <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg">
+        <div className="p-4">
+          <AttackTimeline assessmentId={parseInt(id)} />
+        </div>
+      </div>
+
+      {/* Send Report Modal */}
+      {showSendReport && (
+        <SendReportModal
+          assessmentId={parseInt(id)}
+          assessmentName={assessment.name}
+          onClose={() => setShowSendReport(false)}
+        />
+      )}
+
       {/* Markdown Documents Modal */}
       {showMarkdownModal && (
         <MarkdownDocumentsModal

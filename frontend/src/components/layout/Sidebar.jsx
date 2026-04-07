@@ -1,21 +1,26 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { Logo, LayoutDashboard, FileText, Terminal, Settings, ChevronLeft, ChevronRight } from '../icons';
+import { LogOut, Users as UsersIcon } from 'lucide-react';
 import commandSettingsService from '../../services/commandSettingsService';
 import { useWebSocketContext } from '../../contexts/WebSocketContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useAuth } from '../../contexts/AuthContext';
 
 const Sidebar = ({ onToggle }) => {
   const { isDark } = useTheme();
+  const { user, logout } = useAuth();
   const location = useLocation();
   const [isExpanded, setIsExpanded] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
 
+  const isAdmin = user?.role === 'admin';
   const navigation = [
     { name: 'Dashboard', href: '/', icon: LayoutDashboard },
     { name: 'Assessments', href: '/assessments', icon: FileText },
     { name: 'Commands', href: '/commands', icon: Terminal, showBadge: true },
+    ...(isAdmin ? [{ name: 'Users', href: '/users', icon: UsersIcon }] : []),
     { name: 'Settings', href: '/settings', icon: Settings },
   ];
 
@@ -146,10 +151,30 @@ const Sidebar = ({ onToggle }) => {
               />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium text-neutral-900 dark:text-neutral-100 truncate">AIDA</p>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400">v1.0.0 Beta</p>
+              <p className="text-xs font-medium text-neutral-900 dark:text-neutral-100 truncate">
+                {user ? user.username : 'AIDA'}
+              </p>
+              <p className="text-xs text-neutral-500 dark:text-neutral-400">v1.0.0-alpha</p>
             </div>
+            <button
+              onClick={logout}
+              title="Sign out"
+              className="p-1 rounded hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
           </div>
+        </div>
+      )}
+      {!shouldShowExpanded && (
+        <div className="p-2 border-t border-neutral-200 dark:border-neutral-700">
+          <button
+            onClick={logout}
+            title="Sign out"
+            className="w-full flex items-center justify-center p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
         </div>
       )}
     </aside>

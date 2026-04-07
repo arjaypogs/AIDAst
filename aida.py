@@ -90,6 +90,8 @@ AIDA_CONFIG_DIR = AIDA_ROOT / ".aida"
 PREPROMPT_FILE = AIDA_ROOT / "Docs" / "PrePrompt.txt"
 MCP_SERVER_PATH = AIDA_ROOT / "backend" / "mcp" / "aida_mcp_server.py"
 MCP_CONFIG_FILE = AIDA_CONFIG_DIR / "mcp-config.json"
+SESSION_FILE = AIDA_CONFIG_DIR / "session"
+API_KEY_FILE = AIDA_CONFIG_DIR / "api-key"
 
 # Kimi-specific config files
 KIMI_AGENT_FILE = AIDA_CONFIG_DIR / "kimi-agent.yaml"
@@ -98,6 +100,8 @@ KIMI_SYSTEM_PROMPT_FILE = AIDA_CONFIG_DIR / "kimi-system.md"
 DEFAULT_MODEL = "claude-sonnet-4-5"
 DEFAULT_PERMISSION = "default"
 DEFAULT_BACKEND = "http://localhost:8000/api"
+
+CONTAINER_PREFS_FILE = AIDA_CONFIG_DIR / "container-preference"
 
 # CLI types
 CLIType = Literal["claude", "kimi", "qwen"]
@@ -195,7 +199,7 @@ def check_exegol_installed() -> bool:
         return False
 
 
-def generate_mcp_config(db_url: str, quiet=False) -> None:
+def generate_mcp_config(db_url: str, token: str = "", quiet=False) -> None:
     """Generate MCP configuration file with proper backend venv"""
     AIDA_CONFIG_DIR.mkdir(exist_ok=True)
     
@@ -216,13 +220,16 @@ def generate_mcp_config(db_url: str, quiet=False) -> None:
                 "args": [str(MCP_SERVER_PATH.absolute())],
                 "env": {
                     "PYTHONPATH": str((AIDA_ROOT / "backend").absolute()),
-                    "DATABASE_URL": db_url
+                    "DATABASE_URL": db_url,
+                    "AIDA_TOKEN": token,
                 }
             }
         }
     }
     
     MCP_CONFIG_FILE.write_text(json.dumps(config, indent=2))
+    # Token is embedded in plaintext — restrict to owner only.
+    MCP_CONFIG_FILE.chmod(0o600)
     if not quiet:
         console.print(f"[dim]✓ MCP config: {MCP_CONFIG_FILE.name}[/dim]")
         console.print(f"[dim]  Python: {python_bin_str}[/dim]")
@@ -289,7 +296,126 @@ def detect_cli() -> CLIType:
     return None
 
 
-def resolve_workspace(assessment_name: str, backend_url: str) -> Optional[dict]:
+def _read_file_token(path: Path) -> Optional[str]:
+    """Read a token from a chmod-600 file, return None if missing/empty."""
+    if path.exists():
+        try:
+            return path.read_text().strip() or None
+        except OSError:
+            pass
+    return None
+
+
+def _write_file_token(path: Path, token: str) -> None:
+    """Write token to path with owner-only permissions."""
+    AIDA_CONFIG_DIR.mkdir(exist_ok=True)
+    path.write_text(token)
+    path.chmod(0o600)
+
+
+def _validate_token(backend_url: str, token: str) -> bool:
+    """Return True if token is accepted by /auth/me."""
+    try:
+        with httpx.Client(timeout=5.0) as client:
+            r = client.get(f"{backend_url}/auth/me",
+                           headers={"Authorization": f"Bearer {token}"})
+        return r.status_code == 200
+    except httpx.ConnectError:
+        console.print("[red]✗ Cannot reach backend — is it running?[/red]\n")
+        console.print("  → [cyan]docker-compose up -d[/cyan]\n")
+        sys.exit(1)
+
+
+def _do_login(backend_url: str) -> str:
+    """Prompt for credentials, call /auth/login, return short-lived token."""
+    import getpass
+    console.print("[bold]AIDA Backend Login[/bold]")
+    username = console.input("  Username: ")
+    password = getpass.getpass("  Password: ")
+
+    try:
+        with httpx.Client(timeout=10.0) as client:
+            response = client.post(
+                f"{backend_url}/auth/login",
+                json={"username": username, "password": password},
+            )
+        if response.status_code == 200:
+            return response.json()["access_token"]
+        elif response.status_code == 401:
+            console.print("[red]✗ Invalid credentials[/red]\n")
+            sys.exit(1)
+        else:
+            console.print(f"[red]✗ Login failed ({response.status_code})[/red]\n")
+            sys.exit(1)
+    except httpx.ConnectError:
+        console.print("[red]✗ Cannot reach backend — is it running?[/red]\n")
+        console.print("  → [cyan]docker-compose up -d[/cyan]\n")
+        sys.exit(1)
+
+
+def _fetch_api_key(backend_url: str, session_token: str) -> Optional[str]:
+    """Exchange a valid session token for a long-lived API key (1 year)."""
+    try:
+        with httpx.Client(timeout=10.0) as client:
+            r = client.post(
+                f"{backend_url}/auth/api-token",
+                headers={"Authorization": f"Bearer {session_token}"},
+            )
+        if r.status_code == 200:
+            return r.json().get("api_token")
+    except Exception:
+        pass
+    return None
+
+
+def authenticate(backend_url: str) -> str:
+    """Return a valid token for backend API calls.
+
+    Priority:
+      1. AIDA_TOKEN env var (CI / scripting)
+      2. .aida/api-key  — long-lived (1 year), never prompts once set
+      3. .aida/session  — 24h token from a previous login
+      4. Interactive login → issues api-key stored in .aida/api-key
+    """
+    # 1. Env var override (CI / scripting)
+    token = os.getenv("AIDA_TOKEN")
+    if token:
+        return token
+
+    # 2. Long-lived API key — valid for 1 year, silently reused
+    token = _read_file_token(API_KEY_FILE)
+    if token and _validate_token(backend_url, token):
+        return token
+    if token:
+        API_KEY_FILE.unlink(missing_ok=True)  # expired, remove
+
+    # 3. Short-lived session token from a previous login
+    token = _read_file_token(SESSION_FILE)
+    if token and _validate_token(backend_url, token):
+        # Upgrade to a long-lived API key while the session is still valid
+        api_key = _fetch_api_key(backend_url, token)
+        if api_key:
+            _write_file_token(API_KEY_FILE, api_key)
+            SESSION_FILE.unlink(missing_ok=True)
+            return api_key
+        return token
+    if token:
+        SESSION_FILE.unlink(missing_ok=True)
+
+    # 4. Interactive login — first time or after key revocation
+    session_token = _do_login(backend_url)
+    api_key = _fetch_api_key(backend_url, session_token)
+    if api_key:
+        _write_file_token(API_KEY_FILE, api_key)
+        console.print("[green]✓ Authenticated[/green]\n")
+        return api_key
+    # Fallback: api-token endpoint unavailable, cache the session token
+    _write_file_token(SESSION_FILE, session_token)
+    console.print("[green]✓ Authenticated[/green]\n")
+    return session_token
+
+
+def resolve_workspace(assessment_name: str, backend_url: str, token: str = "") -> Optional[dict]:
     """Resolve assessment workspace via API, with retry on transient network errors"""
     import time
 
@@ -297,11 +423,13 @@ def resolve_workspace(assessment_name: str, backend_url: str) -> Optional[dict]:
     retry_delays = [1, 2, 4]  # exponential backoff in seconds
 
     for attempt in range(max_retries):
+        headers = {"Authorization": f"Bearer {token}"} if token else {}
         try:
             with httpx.Client(timeout=10.0) as client:
                 response = client.get(
                     f"{backend_url}/workspace/resolve",
-                    params={"assessment_name": assessment_name}
+                    params={"assessment_name": assessment_name},
+                    headers=headers,
                 )
 
                 if response.status_code == 200:
@@ -340,13 +468,14 @@ def resolve_workspace(assessment_name: str, backend_url: str) -> Optional[dict]:
 def show_assessment_not_found(assessment_name: str, backend_url: str):
     """Display detailed error when assessment workspace cannot be resolved"""
     console.print(f"\n[red]✗ Cannot load assessment '{assessment_name}'[/red]\n")
-    
-    # Check if Exegol is installed
-    if not check_exegol_installed():
-        console.print("[yellow]⚠ Exegol container not detected on this system[/yellow]\n")
-        console.print("[bold]AIDA requires Exegol to execute pentesting commands.[/bold]")
-        console.print("Without Exegol, the AI cannot run security tools.\n")
-    
+
+    container_pref = CONTAINER_PREFS_FILE.read_text().strip() if CONTAINER_PREFS_FILE.exists() else "aida-pentest"
+
+    if container_pref == "exegol" and not check_exegol_installed():
+        console.print("[yellow]⚠ No Exegol container detected on this system[/yellow]\n")
+        console.print("[bold]Start an Exegol container before using AIDA:[/bold]")
+        console.print("  [cyan]exegol start <name>[/cyan]\n")
+
     sys.exit(1)
 
 
@@ -370,7 +499,7 @@ def show_cli_not_found():
 @click.command()
 @click.option("-a", "--assessment", help="Load specific assessment")
 @click.option("-m", "--model", default=None, help="Model to use (optional, uses CLI default if not specified)")
-@click.option("--permission-mode", default=None, help=f"Permission mode for Claude Code (default: {DEFAULT_PERMISSION})")
+@click.option("--permission-mode", default=None, help=f"Permission mode for Claude Code: auto, default, dontAsk, acceptEdits, bypassPermissions, plan (default: {DEFAULT_PERMISSION})")
 @click.option("--preprompt", type=click.Path(exists=False), help="Path to custom preprompt file (default: Docs/PrePrompt.txt)")
 @click.option("--base-url", help="Custom API base URL (Claude Code only)")
 @click.option("--api-key", help="API authentication token (Claude Code only)")
@@ -418,7 +547,12 @@ def main(assessment, model, permission_mode, preprompt, base_url, api_key, no_mc
     permission_mode = permission_mode or os.getenv("AIDA_PERMISSION_MODE", DEFAULT_PERMISSION)
     backend_url = os.getenv("BACKEND_API_URL", DEFAULT_BACKEND)
     db_url = os.getenv("DATABASE_URL", "postgresql://aida:aida@localhost:5432/aida_assessments")
-    
+
+    # Authenticate once — all subsequent API calls use this token.
+    # The token is also forwarded to the MCP server via AIDA_TOKEN env var.
+    token = authenticate(backend_url)
+    auth_headers = {"Authorization": f"Bearer {token}"}
+
     # Interactive assessment selection if none provided
     if not assessment:
         console.print()
@@ -428,7 +562,7 @@ def main(assessment, model, permission_mode, preprompt, base_url, api_key, no_mc
         # Fetch available assessments
         try:
             with httpx.Client(timeout=5.0) as client:
-                response = client.get(f"{backend_url}/assessments")
+                response = client.get(f"{backend_url}/assessments", headers=auth_headers)
                 
                 if response.status_code != 200:
                     console.print("[red]Failed to fetch assessments from backend[/red]\n")
@@ -535,7 +669,7 @@ def main(assessment, model, permission_mode, preprompt, base_url, api_key, no_mc
         if not MCP_SERVER_PATH.exists():
             console.print(f"[red]✗ MCP server not found: {MCP_SERVER_PATH}[/red]\n")
             sys.exit(1)
-        generate_mcp_config(db_url, quiet)
+        generate_mcp_config(db_url, token, quiet)
     
     # Workspace resolution
     workspace_path = str(AIDA_ROOT)
@@ -546,7 +680,7 @@ def main(assessment, model, permission_mode, preprompt, base_url, api_key, no_mc
         if not quiet and debug:
             console.print(f"[dim]Resolving workspace for: {assessment}[/dim]")
         
-        result = resolve_workspace(assessment, backend_url)
+        result = resolve_workspace(assessment, backend_url, token)
         
         if not result or not result.get("success"):
             show_assessment_not_found(assessment, backend_url)
@@ -607,9 +741,9 @@ The assessment workspace is ready. Use your standard tools to work with files an
         if api_key:
             env["ANTHROPIC_AUTH_TOKEN"] = api_key
 
-        # Handle --yes flag for Claude (maps to accept permission mode)
+        # Handle --yes flag for Claude (maps to auto permission mode)
         if yes and permission_mode == DEFAULT_PERMISSION:
-            cli_args[cli_args.index("--permission-mode") + 1] = "accept"
+            cli_args[cli_args.index("--permission-mode") + 1] = "auto"
 
         cli_name = "Claude Code"
 

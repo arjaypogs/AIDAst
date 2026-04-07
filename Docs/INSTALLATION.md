@@ -59,11 +59,13 @@ This starts:
 - **Frontend** on port `5173` - React dashboard
 - **aida-pentest** - Pentesting container (if selected above)
 
-### Step 3: Verify It Works
+### Step 3: First-Run Setup
 
 Open your browser to [http://localhost:5173](http://localhost:5173)
 
-You should see the AIDA dashboard.
+On the very first launch, AIDA shows a **setup wizard** to create the initial admin account. Pick a username and password — these are the credentials you'll use everywhere (web UI, CLI, MCP). Once submitted, you land on the dashboard.
+
+> **Lost your password?** See [`Docs/RESET_PASSWORD.md`](RESET_PASSWORD.md).
 
 ---
 
@@ -108,16 +110,25 @@ Now you need to hook up AIDA to your AI assistant via MCP.
 |-----------|----------------|--------------|
 | **Claude Code** | Recommended | Use `aida.py` CLI (automatic) |
 | **Kimi CLI** | Recommended | Use `aida.py` CLI (automatic) |
+| **Qwen Code CLI** | Recommended | Use `aida.py --cli qwen` (automatic) |
 | **Vertex AI / External API** | Recommended | Use `aida.py` with flags |
-| **Antigravity** | Works | Manual MCP import |
-| **Gemini CLI** | Works | Manual MCP import |
-| **Claude Desktop** | Works | Manual MCP import |
+| **Antigravity** | Works | Manual MCP import (run `aida.py` once first) |
+| **Gemini CLI** | Works | Manual MCP import (run `aida.py` once first) |
+| **Claude Desktop** | Works | Manual MCP import (run `aida.py` once first) |
 
 ---
 
 ## AIDA CLI — Claude Code & Kimi
 
-The `aida.py` CLI is the recommended way to launch AIDA. It **auto-detects** which AI client you have installed (Claude Code or Kimi CLI) and configures everything automatically — MCP server, workspace, preprompt.
+The `aida.py` CLI is the recommended way to launch AIDA. It **auto-detects** which AI client you have installed (Claude Code, Kimi CLI, or Qwen Code) and configures everything automatically — MCP server, workspace, preprompt, and authentication.
+
+### Authentication (First Launch)
+
+The first time you run `aida.py`, it prompts for your AIDA credentials (the ones you created in the setup wizard) and stores a **long-lived API key** in `.aida/api-key` (`chmod 600`, valid 1 year). Every subsequent launch reuses this key silently — no more prompts.
+
+The same key is used by the MCP server to authenticate against the backend, so it works for both the launcher and AI tool calls. To force a re-login, delete `.aida/api-key`.
+
+For non-interactive use (CI, scripts), set `AIDA_TOKEN` in the environment to bypass the prompt entirely.
 
 ### Common Options
 
@@ -242,15 +253,18 @@ Same benefits as Claude Code, but routing through your own API endpoint.
 
 For Antigravity, Gemini CLI, Claude Desktop, or ChatGPT, you need to manually configure the MCP server.
 
+> ⚠️ **Authentication first** — The MCP server reads its API key from `.aida/api-key`, which is created the first time you run `aida.py`. **Run `python3 aida.py` once before starting your external client**, log in when prompted, and you can `Ctrl+C` immediately after — the key is now cached and any external MCP client will use it.
+
 **The process:**
 
-1. Import the MCP server config (see examples below)
-2. Copy the preprompt from `Docs/PrePrompt.txt`
-3. Paste it into your AI client when starting an assessment
+1. Run `python3 aida.py` once to log in and generate `.aida/api-key`
+2. Import the MCP server config (see examples below)
+3. Copy the preprompt from `Docs/PrePrompt.txt`
+4. Paste it into your AI client when starting an assessment
 
 > Antigravity works great if you select Claude. Gemini is OK. Any MCP-compatible client should work.
 >
-> **Prefer Claude Code or Kimi?** Use `aida.py` instead — it handles all of this automatically.
+> **Prefer Claude Code, Kimi, or Qwen?** Use `aida.py` instead — it handles all of this automatically.
 
 ### Config Paths
 

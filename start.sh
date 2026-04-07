@@ -56,6 +56,16 @@ if ! docker info &> /dev/null; then
     exit 1
 fi
 
+# Docker Compose: prefer plugin, fallback to standalone (Kali)
+if docker compose version &>/dev/null; then
+    COMPOSE_CMD="docker compose"
+elif command -v docker-compose &>/dev/null; then
+    COMPOSE_CMD="docker-compose"
+else
+    error "Docker Compose not found. Install: sudo apt install docker-compose"
+    exit 1
+fi
+
 # ==============================================================================
 # CHECK PORT CONFLICTS
 # ==============================================================================
@@ -103,12 +113,12 @@ fi
 # CHECK IF ALREADY RUNNING
 # ==============================================================================
 
-CONTAINERS_RUNNING=$(docker compose ps --status running -q 2>/dev/null | wc -l | tr -d ' ')
+CONTAINERS_RUNNING=$($COMPOSE_CMD ps --status running -q 2>/dev/null | wc -l | tr -d ' ')
 
 if [[ "$CONTAINERS_RUNNING" -ge 3 ]] && [[ "$FORCE_BUILD" == "false" ]]; then
     log "AIDA is already running!"
     echo ""
-    docker compose ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
+    $COMPOSE_CMD ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
     echo ""
     log "Frontend: http://localhost:5173"
     log "Backend:  http://localhost:8000"
@@ -222,7 +232,7 @@ ORPHAN_BACKEND=$(docker ps -a --format "{{.Names}}" | grep "^aida_backend$" || t
 ORPHAN_FRONTEND=$(docker ps -a --format "{{.Names}}" | grep "^aida_frontend$" || true)
 
 # Check if these containers belong to our project
-OUR_CONTAINERS=$(docker compose ps -a -q 2>/dev/null | wc -l | tr -d ' ')
+OUR_CONTAINERS=$($COMPOSE_CMD ps -a -q 2>/dev/null | wc -l | tr -d ' ')
 
 if [[ -n "$ORPHAN_POSTGRES" || -n "$ORPHAN_BACKEND" || -n "$ORPHAN_FRONTEND" ]] && [[ "$OUR_CONTAINERS" -eq 0 ]]; then
     warn "Found containers from another project with same names"
@@ -256,10 +266,10 @@ BUILD_NEEDED=false
 if [[ "$BUILD_NEEDED" == "true" ]]; then
     if [[ "$CONTAINER_MODE" == "aida-pentest" ]]; then
         log "Building Docker images (first build of aida-pentest may take a few minutes)..."
-        docker compose build --quiet
+        $COMPOSE_CMD build --quiet
     else
         log "Building Docker images..."
-        docker compose build --quiet backend frontend
+        $COMPOSE_CMD build --quiet backend frontend
     fi
     log "Images built"
 else
@@ -271,25 +281,25 @@ fi
 # ==============================================================================
 
 # Check current state
-STOPPED_CONTAINERS=$(docker compose ps --status exited -q 2>/dev/null | wc -l | tr -d ' ')
-RUNNING_CONTAINERS=$(docker compose ps --status running -q 2>/dev/null | wc -l | tr -d ' ')
+STOPPED_CONTAINERS=$($COMPOSE_CMD ps --status exited -q 2>/dev/null | wc -l | tr -d ' ')
+RUNNING_CONTAINERS=$($COMPOSE_CMD ps --status running -q 2>/dev/null | wc -l | tr -d ' ')
 
 if [[ "$RUNNING_CONTAINERS" -ge 3 ]]; then
     log "Containers already running"
 elif [[ "$STOPPED_CONTAINERS" -gt 0 ]]; then
     log "Starting existing containers..."
     if [[ "$CONTAINER_MODE" == "aida-pentest" ]]; then
-        docker compose start 2>/dev/null
+        $COMPOSE_CMD start 2>/dev/null
     else
-        docker compose start postgres backend frontend 2>/dev/null
+        $COMPOSE_CMD start postgres backend frontend 2>/dev/null
     fi
 else
     log "Creating and starting containers..."
     # Suppress volume warning (cosmetic - data is preserved)
     if [[ "$CONTAINER_MODE" == "aida-pentest" ]]; then
-        docker compose up -d 2>&1 | grep -v "already exists but was created for project" || true
+        $COMPOSE_CMD up -d 2>&1 | grep -v "already exists but was created for project" || true
     else
-        docker compose up -d postgres backend frontend 2>&1 | grep -v "already exists but was created for project" || true
+        $COMPOSE_CMD up -d postgres backend frontend 2>&1 | grep -v "already exists but was created for project" || true
     fi
 fi
 
@@ -317,17 +327,18 @@ wait_for_service() {
     echo -e "${GREEN}Ready${NC}"
 }
 
-wait_for_service "PostgreSQL" "docker compose exec -T postgres pg_isready -U aida"
+wait_for_service "PostgreSQL" "$COMPOSE_CMD exec -T postgres pg_isready -U aida"
 wait_for_service "Backend" "curl -sf http://localhost:8000/health"
 wait_for_service "Frontend" "curl -sf http://localhost:5173"
 
 # ==============================================================================
-# FOLDER OPENER (Background helper)
+# HOST HELPER (Background)
 # ==============================================================================
 
-pkill -f "folder_opener.py" 2>/dev/null || true
-if [[ -f "$SCRIPT_DIR/tools/folder_opener.py" ]]; then
-    python3 "$SCRIPT_DIR/tools/folder_opener.py" &>/dev/null &
+pkill -f "tools/helper.py" 2>/dev/null || true
+pkill -f "folder_opener.py" 2>/dev/null || true  # legacy name, just in case
+if [[ -f "$SCRIPT_DIR/tools/helper.py" ]]; then
+    python3 "$SCRIPT_DIR/tools/helper.py" &>/dev/null &
 fi
 
 # ==============================================================================
@@ -348,7 +359,7 @@ else
     PENTEST_RUNNING=$(docker ps --format "{{.Names}}" 2>/dev/null | grep "^aida-pentest$" || true)
     if [[ -z "$PENTEST_RUNNING" ]]; then
         warn "aida-pentest not running — starting..."
-        docker compose up -d aida-pentest 2>&1 | grep -v "already" || true
+        $COMPOSE_CMD up -d aida-pentest 2>&1 | grep -v "already" || true
     else
         log "Pentesting container: aida-pentest"
     fi
@@ -365,5 +376,5 @@ log "Frontend:  http://localhost:5173"
 log "Backend:   http://localhost:8000"
 log "API Docs:  http://localhost:8000/docs"
 echo ""
-docker compose ps --format "table {{.Name}}\t{{.Status}}"
+$COMPOSE_CMD ps --format "table {{.Name}}\t{{.Status}}"
 echo ""

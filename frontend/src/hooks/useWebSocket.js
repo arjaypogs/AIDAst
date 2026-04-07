@@ -17,18 +17,27 @@ export function useWebSocket(assessmentId = null) {
   const [lastError, setLastError] = useState(null);
   const [lastMessage, setLastMessage] = useState(null);
 
-  // Build WebSocket URL based on assessment ID
+  // Build WebSocket URL based on assessment ID. The JWT is passed via query
+  // string because browser WebSocket clients can't set Authorization headers.
   const getWebSocketUrl = useCallback(() => {
+    const token = localStorage.getItem('aida_token');
+    const tokenQs = token ? `?token=${encodeURIComponent(token)}` : '';
     if (assessmentId) {
-      return `${WS_URL}/ws/assessment/${assessmentId}`;
+      return `${WS_URL}/ws/assessment/${assessmentId}${tokenQs}`;
     }
-    return `${WS_URL}/ws`;
+    return `${WS_URL}/ws${tokenQs}`;
   }, [assessmentId]);
 
   // Connect to WebSocket
   const connect = useCallback(() => {
     // Prevent multiple connections
     if (ws.current?.readyState === WebSocket.OPEN || ws.current?.readyState === WebSocket.CONNECTING) {
+      return;
+    }
+
+    // Don't even try to connect without a token: the backend will close the
+    // socket immediately and we'd burn through the reconnect budget.
+    if (!localStorage.getItem('aida_token')) {
       return;
     }
 

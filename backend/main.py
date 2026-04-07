@@ -1,16 +1,27 @@
 """
 Main FastAPI application
 """
-from fastapi import FastAPI
+# Provision the JWT signing key BEFORE anything else imports auth/config so
+# the application can never run with the hardcoded legacy default.
+from bootstrap_secrets import ensure_secret_key
+ensure_secret_key()
+
+from contextlib import asynccontextmanager
+
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from auth import get_current_user, require_admin
 from config import settings
 from database import init_db
-from api import assessments, cards, recon, sections, containers, folders, global_commands, search, system, credentials, websocket, workspace, pending_commands, context_documents, source_code
+from api import assessments, cards, recon, sections, containers, folders, global_commands, search, system, credentials, websocket, workspace, pending_commands, context_documents, source_code, auth, reports, timeline, notifications, templates, users
 from api import commands
 from api.commands import global_router as commands_global_router
 from utils.logger import setup_logging, get_logger
 from middleware.logging_middleware import LoggingMiddleware
+from middleware.rate_limit import limiter, rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 # Setup structured logging
 setup_logging(
@@ -25,12 +36,35 @@ setup_logging(
 
 logger = get_logger(__name__)
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifecycle: run migrations on startup, nothing on shutdown."""
+    init_db()
+    logger.info(
+        "Application started",
+        project=settings.PROJECT_NAME,
+        version=settings.VERSION,
+        database=settings.DATABASE_URL.split("@")[-1],
+        workspace=settings.CONTAINER_WORKSPACE_BASE,
+        log_level=settings.LOG_LEVEL,
+        log_format=settings.LOG_FORMAT,
+        cors_origins=settings.BACKEND_CORS_ORIGINS,
+    )
+    yield
+
+
 # Create FastAPI app
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
-    description=settings.PROJECT_TAGLINE
+    description=settings.PROJECT_TAGLINE,
+    lifespan=lifespan,
 )
+
+# Rate limiting
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 # Configure logging middleware (before CORS)
 app.add_middleware(LoggingMiddleware)
@@ -46,40 +80,43 @@ app.add_middleware(
     max_age=3600,  # Cache preflight requests for 1 hour
 )
 
-# Include routers
-app.include_router(assessments.router, prefix=settings.API_V1_PREFIX)
-app.include_router(cards.router, prefix=settings.API_V1_PREFIX)
-app.include_router(recon.router, prefix=settings.API_V1_PREFIX)
-app.include_router(commands.router, prefix=settings.API_V1_PREFIX)
-app.include_router(commands_global_router, prefix=settings.API_V1_PREFIX)  # Global commands view
-app.include_router(credentials.router, prefix=settings.API_V1_PREFIX)
-app.include_router(global_commands.router, prefix=settings.API_V1_PREFIX)
-app.include_router(search.router, prefix=settings.API_V1_PREFIX)
-app.include_router(system.router, prefix=settings.API_V1_PREFIX)
-app.include_router(sections.router, prefix=settings.API_V1_PREFIX)
-app.include_router(containers.router, prefix=settings.API_V1_PREFIX)
-app.include_router(folders.router, prefix=settings.API_V1_PREFIX)
-app.include_router(workspace.router, prefix=settings.API_V1_PREFIX)
+# Routers requiring an authenticated user. Applied at include time so any new
+# router added here is protected by default — impossible to forget.
+protected = [Depends(get_current_user)]
+
+# Public routers (auth itself, websocket — token validated inside the handler).
+app.include_router(auth.router, prefix=settings.API_V1_PREFIX)
 app.include_router(websocket.router, prefix=settings.API_V1_PREFIX)
-app.include_router(pending_commands.router, prefix=settings.API_V1_PREFIX)  # Pending commands
-app.include_router(pending_commands.settings_router, prefix=settings.API_V1_PREFIX)  # Command settings
-app.include_router(context_documents.router, prefix=settings.API_V1_PREFIX)  # Context documents
-app.include_router(source_code.router, prefix=settings.API_V1_PREFIX)  # Source code import
 
+# Protected routers
+app.include_router(assessments.router, prefix=settings.API_V1_PREFIX, dependencies=protected)
+app.include_router(cards.router, prefix=settings.API_V1_PREFIX, dependencies=protected)
+app.include_router(recon.router, prefix=settings.API_V1_PREFIX, dependencies=protected)
+app.include_router(commands.router, prefix=settings.API_V1_PREFIX, dependencies=protected)
+app.include_router(commands_global_router, prefix=settings.API_V1_PREFIX, dependencies=protected)
+app.include_router(credentials.router, prefix=settings.API_V1_PREFIX, dependencies=protected)
+app.include_router(global_commands.router, prefix=settings.API_V1_PREFIX, dependencies=protected)
+app.include_router(search.router, prefix=settings.API_V1_PREFIX, dependencies=protected)
+app.include_router(system.router, prefix=settings.API_V1_PREFIX, dependencies=protected)
+app.include_router(sections.router, prefix=settings.API_V1_PREFIX, dependencies=protected)
+app.include_router(containers.router, prefix=settings.API_V1_PREFIX, dependencies=protected)
+app.include_router(folders.router, prefix=settings.API_V1_PREFIX, dependencies=protected)
+app.include_router(workspace.router, prefix=settings.API_V1_PREFIX, dependencies=protected)
+app.include_router(pending_commands.router, prefix=settings.API_V1_PREFIX, dependencies=protected)
+app.include_router(pending_commands.settings_router, prefix=settings.API_V1_PREFIX, dependencies=protected)
+app.include_router(context_documents.router, prefix=settings.API_V1_PREFIX, dependencies=protected)
+app.include_router(source_code.router, prefix=settings.API_V1_PREFIX, dependencies=protected)
+app.include_router(reports.router, prefix=settings.API_V1_PREFIX, dependencies=protected)
+app.include_router(timeline.router, prefix=settings.API_V1_PREFIX, dependencies=protected)
+app.include_router(notifications.router, prefix=settings.API_V1_PREFIX, dependencies=protected)
+app.include_router(templates.router, prefix=settings.API_V1_PREFIX, dependencies=protected)
 
-@app.on_event("startup")
-async def startup_event():
-    """Initialize database on startup"""
-    init_db()
-    logger.info(
-        "Application started",
-        project=settings.PROJECT_NAME,
-        version=settings.VERSION,
-        database=settings.DATABASE_URL.split("@")[-1],  # Hide credentials
-        workspace=settings.CONTAINER_WORKSPACE_BASE,
-        log_level=settings.LOG_LEVEL,
-        log_format=settings.LOG_FORMAT
-    )
+# Admin-only router
+app.include_router(
+    users.router,
+    prefix=settings.API_V1_PREFIX,
+    dependencies=[Depends(require_admin)],
+)
 
 
 @app.get("/")
