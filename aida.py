@@ -90,6 +90,7 @@ AIDA_CONFIG_DIR = AIDA_ROOT / ".aida"
 PREPROMPT_FILE = AIDA_ROOT / "Docs" / "PrePrompt.txt"
 MCP_SERVER_PATH = AIDA_ROOT / "backend" / "mcp" / "aida_mcp_server.py"
 MCP_CONFIG_FILE = AIDA_CONFIG_DIR / "mcp-config.json"
+SESSION_FILE = AIDA_CONFIG_DIR / "session"
 
 # Kimi-specific config files
 KIMI_AGENT_FILE = AIDA_CONFIG_DIR / "kimi-agent.yaml"
@@ -292,16 +293,25 @@ def detect_cli() -> CLIType:
     return None
 
 
-def authenticate(backend_url: str) -> str:
-    """Return a JWT token for backend API calls.
+def _load_session() -> Optional[str]:
+    """Read cached token from .aida/session (600 permissions)."""
+    if SESSION_FILE.exists():
+        try:
+            return SESSION_FILE.read_text().strip() or None
+        except OSError:
+            pass
+    return None
 
-    Checks AIDA_TOKEN env var first (non-interactive).  If absent, prompts
-    the user for credentials and exchanges them for a token via /auth/login.
-    """
-    token = os.getenv("AIDA_TOKEN")
-    if token:
-        return token
 
+def _save_session(token: str) -> None:
+    """Persist token to .aida/session with owner-only permissions."""
+    AIDA_CONFIG_DIR.mkdir(exist_ok=True)
+    SESSION_FILE.write_text(token)
+    SESSION_FILE.chmod(0o600)
+
+
+def _do_login(backend_url: str) -> str:
+    """Prompt for credentials, call /auth/login, return token."""
     import getpass
     console.print("[bold]AIDA Backend Login[/bold]")
     username = console.input("  Username: ")
@@ -314,9 +324,7 @@ def authenticate(backend_url: str) -> str:
                 json={"username": username, "password": password},
             )
         if response.status_code == 200:
-            token = response.json()["access_token"]
-            console.print("[green]✓ Authenticated[/green]\n")
-            return token
+            return response.json()["access_token"]
         elif response.status_code == 401:
             console.print("[red]✗ Invalid credentials[/red]\n")
             sys.exit(1)
@@ -327,6 +335,45 @@ def authenticate(backend_url: str) -> str:
         console.print("[red]✗ Cannot reach backend — is it running?[/red]\n")
         console.print("  → [cyan]docker-compose up -d[/cyan]\n")
         sys.exit(1)
+
+
+def authenticate(backend_url: str) -> str:
+    """Return a valid JWT token for backend API calls.
+
+    Priority:
+      1. AIDA_TOKEN env var (CI / scripting)
+      2. .aida/session file (cached from previous login)
+      3. Interactive login prompt → token saved to .aida/session
+    On token expiry (401), the cached session is cleared and the user
+    is prompted to log in again.
+    """
+    # 1. Env var override (non-interactive / CI)
+    token = os.getenv("AIDA_TOKEN")
+    if token:
+        return token
+
+    # 2. Cached session
+    token = _load_session()
+    if token:
+        # Quick validation — if the backend returns 401 the token expired
+        try:
+            with httpx.Client(timeout=5.0) as client:
+                r = client.get(f"{backend_url}/auth/me",
+                               headers={"Authorization": f"Bearer {token}"})
+            if r.status_code == 200:
+                return token
+            # Token expired or invalid — fall through to login
+            SESSION_FILE.unlink(missing_ok=True)
+        except httpx.ConnectError:
+            console.print("[red]✗ Cannot reach backend — is it running?[/red]\n")
+            console.print("  → [cyan]docker-compose up -d[/cyan]\n")
+            sys.exit(1)
+
+    # 3. Interactive login
+    token = _do_login(backend_url)
+    _save_session(token)
+    console.print("[green]✓ Authenticated[/green]\n")
+    return token
 
 
 def resolve_workspace(assessment_name: str, backend_url: str, token: str = "") -> Optional[dict]:
