@@ -10,7 +10,11 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-aida}
       POSTGRES_DB: ${POSTGRES_DB:-aida_assessments}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      # Bind to localhost only — the database must never be reachable from
+      # the LAN. The backend talks to postgres over the internal docker
+      # network, so this mapping only exists for host-side dev tools (psql,
+      # pgAdmin, DBeaver). Remove the line entirely to lock it down further.
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
