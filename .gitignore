@@ -55,8 +55,9 @@ postgres_data/
 start-legacy.sh
 stop-legacy.sh
 
-# MCP config (contains API keys)
+# MCP config (contains API keys) and local runtime state
 /.aida/mcp-config.json
+/.aida/container-preference
 
 # Docker
 docker-compose.override.yml

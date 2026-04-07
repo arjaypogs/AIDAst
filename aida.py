@@ -197,7 +197,7 @@ def check_exegol_installed() -> bool:
         return False
 
 
-def generate_mcp_config(db_url: str, quiet=False) -> None:
+def generate_mcp_config(db_url: str, token: str = "", quiet=False) -> None:
     """Generate MCP configuration file with proper backend venv"""
     AIDA_CONFIG_DIR.mkdir(exist_ok=True)
     
@@ -218,7 +218,8 @@ def generate_mcp_config(db_url: str, quiet=False) -> None:
                 "args": [str(MCP_SERVER_PATH.absolute())],
                 "env": {
                     "PYTHONPATH": str((AIDA_ROOT / "backend").absolute()),
-                    "DATABASE_URL": db_url
+                    "DATABASE_URL": db_url,
+                    "AIDA_TOKEN": token,
                 }
             }
         }
@@ -291,7 +292,44 @@ def detect_cli() -> CLIType:
     return None
 
 
-def resolve_workspace(assessment_name: str, backend_url: str) -> Optional[dict]:
+def authenticate(backend_url: str) -> str:
+    """Return a JWT token for backend API calls.
+
+    Checks AIDA_TOKEN env var first (non-interactive).  If absent, prompts
+    the user for credentials and exchanges them for a token via /auth/login.
+    """
+    token = os.getenv("AIDA_TOKEN")
+    if token:
+        return token
+
+    import getpass
+    console.print("[bold]AIDA Backend Login[/bold]")
+    username = console.input("  Username: ")
+    password = getpass.getpass("  Password: ")
+
+    try:
+        with httpx.Client(timeout=10.0) as client:
+            response = client.post(
+                f"{backend_url}/auth/login",
+                json={"username": username, "password": password},
+            )
+        if response.status_code == 200:
+            token = response.json()["access_token"]
+            console.print("[green]✓ Authenticated[/green]\n")
+            return token
+        elif response.status_code == 401:
+            console.print("[red]✗ Invalid credentials[/red]\n")
+            sys.exit(1)
+        else:
+            console.print(f"[red]✗ Login failed ({response.status_code})[/red]\n")
+            sys.exit(1)
+    except httpx.ConnectError:
+        console.print("[red]✗ Cannot reach backend — is it running?[/red]\n")
+        console.print("  → [cyan]docker-compose up -d[/cyan]\n")
+        sys.exit(1)
+
+
+def resolve_workspace(assessment_name: str, backend_url: str, token: str = "") -> Optional[dict]:
     """Resolve assessment workspace via API, with retry on transient network errors"""
     import time
 
@@ -299,11 +337,13 @@ def resolve_workspace(assessment_name: str, backend_url: str) -> Optional[dict]:
     retry_delays = [1, 2, 4]  # exponential backoff in seconds
 
     for attempt in range(max_retries):
+        headers = {"Authorization": f"Bearer {token}"} if token else {}
         try:
             with httpx.Client(timeout=10.0) as client:
                 response = client.get(
                     f"{backend_url}/workspace/resolve",
-                    params={"assessment_name": assessment_name}
+                    params={"assessment_name": assessment_name},
+                    headers=headers,
                 )
 
                 if response.status_code == 200:
@@ -421,7 +461,12 @@ def main(assessment, model, permission_mode, preprompt, base_url, api_key, no_mc
     permission_mode = permission_mode or os.getenv("AIDA_PERMISSION_MODE", DEFAULT_PERMISSION)
     backend_url = os.getenv("BACKEND_API_URL", DEFAULT_BACKEND)
     db_url = os.getenv("DATABASE_URL", "postgresql://aida:aida@localhost:5432/aida_assessments")
-    
+
+    # Authenticate once — all subsequent API calls use this token.
+    # The token is also forwarded to the MCP server via AIDA_TOKEN env var.
+    token = authenticate(backend_url)
+    auth_headers = {"Authorization": f"Bearer {token}"}
+
     # Interactive assessment selection if none provided
     if not assessment:
         console.print()
@@ -431,7 +476,7 @@ def main(assessment, model, permission_mode, preprompt, base_url, api_key, no_mc
         # Fetch available assessments
         try:
             with httpx.Client(timeout=5.0) as client:
-                response = client.get(f"{backend_url}/assessments")
+                response = client.get(f"{backend_url}/assessments", headers=auth_headers)
                 
                 if response.status_code != 200:
                     console.print("[red]Failed to fetch assessments from backend[/red]\n")
@@ -538,7 +583,7 @@ def main(assessment, model, permission_mode, preprompt, base_url, api_key, no_mc
         if not MCP_SERVER_PATH.exists():
             console.print(f"[red]✗ MCP server not found: {MCP_SERVER_PATH}[/red]\n")
             sys.exit(1)
-        generate_mcp_config(db_url, quiet)
+        generate_mcp_config(db_url, token, quiet)
     
     # Workspace resolution
     workspace_path = str(AIDA_ROOT)
@@ -549,7 +594,7 @@ def main(assessment, model, permission_mode, preprompt, base_url, api_key, no_mc
         if not quiet and debug:
             console.print(f"[dim]Resolving workspace for: {assessment}[/dim]")
         
-        result = resolve_workspace(assessment, backend_url)
+        result = resolve_workspace(assessment, backend_url, token)
         
         if not result or not result.get("success"):
             show_assessment_not_found(assessment, backend_url)

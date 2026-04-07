@@ -29,6 +29,7 @@ class AidaMCPService:
         # Load backend URL from environment or use default
         import os
         self.backend_url = backend_url or os.getenv("BACKEND_API_URL", "http://localhost:8000/api")
+        self.token: Optional[str] = os.getenv("AIDA_TOKEN")
         self.current_assessment_id: Optional[int] = None
         self.current_assessment_name: Optional[str] = None
         self.http_client: Optional[httpx.AsyncClient] = None
@@ -65,7 +66,11 @@ class AidaMCPService:
 
     async def initialize(self):
         """Initialize HTTP client and auto-detect containers"""
-        self.http_client = httpx.AsyncClient(timeout=120.0)
+        if not self.http_client:
+            headers = {}
+            if self.token:
+                headers["Authorization"] = f"Bearer {self.token}"
+            self.http_client = httpx.AsyncClient(timeout=120.0, headers=headers)
 
         if not self.is_initialized:
             file_log.info("Auto-detecting pentesting containers...")
