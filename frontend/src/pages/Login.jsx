@@ -105,6 +105,17 @@ export default function Login() {
               {submitting ? 'Please wait...' : 'Sign In'}
             </button>
           </form>
+
+          <div className="mt-4 text-center">
+            <a
+              href="https://github.com/Vasco0x4/AIDA/blob/main/Docs/RESET_PASSWORD.md"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-neutral-500 hover:text-blue-600 dark:text-neutral-400 dark:hover:text-blue-400 transition-colors"
+            >
+              Forgot password?
+            </a>
+          </div>
         </div>
       </div>
     </div>
