@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from config import settings
 from database import init_db
+from bootstrap_admin import bootstrap_admin
 from api import assessments, cards, recon, sections, containers, folders, global_commands, search, system, credentials, websocket, workspace, pending_commands, context_documents, source_code, auth, reports, timeline, notifications, templates
 from api import commands
 from api.commands import global_router as commands_global_router
@@ -84,6 +85,7 @@ app.include_router(templates.router, prefix=settings.API_V1_PREFIX)  # Assessmen
 async def startup_event():
     """Initialize database on startup"""
     init_db()
+    bootstrap_admin()
     logger.info(
         "Application started",
         project=settings.PROJECT_NAME,

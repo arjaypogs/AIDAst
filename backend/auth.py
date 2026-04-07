@@ -31,8 +31,9 @@ security = HTTPBearer(auto_error=False)
 
 class UserCreate(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
-    password: str = Field(..., min_length=6)
+    password: str = Field(..., min_length=12)
     email: Optional[str] = None
+    role: str = Field("user", pattern="^(admin|user)$")
 
 
 class UserLogin(BaseModel):
@@ -40,11 +41,18 @@ class UserLogin(BaseModel):
     password: str
 
 
+class PasswordChangeRequest(BaseModel):
+    current_password: str
+    new_password: str = Field(..., min_length=12)
+
+
 class UserResponse(BaseModel):
     id: int
     username: str
     email: Optional[str]
     is_active: bool
+    role: str
+    must_change_password: bool
 
     class Config:
         from_attributes = True
@@ -91,11 +99,6 @@ def get_current_user(
 ) -> User:
     """Dependency: extract and validate JWT, return User object."""
 
-    # Check if auth is disabled (no users exist = first-run setup mode)
-    user_count = db.query(User).count()
-    if user_count == 0:
-        return None  # No auth required until first user is created
-
     if credentials is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -119,3 +122,13 @@ def get_current_user(
         )
 
     return user
+
+
+def require_admin(current_user: User = Depends(get_current_user)) -> User:
+    """Dependency: ensure the authenticated user has the admin role."""
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required",
+        )
+    return current_user
