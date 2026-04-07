@@ -77,7 +77,7 @@ class ContainerService:
 
         return sanitized
 
-    async def _run_command(self, command: List[str], timeout: float = 10.0) -> Dict[str, Any]:
+    async def _run_command(self, command: List[str], timeout: float = 30.0) -> Dict[str, Any]:
         """Run a system command with a timeout to prevent hangs on docker socket issues"""
         try:
             process = await asyncio.create_subprocess_exec(
@@ -311,6 +311,47 @@ class ContainerService:
             "execution_time": execution_time,
         }
 
+    async def _resolve_active_container(self, db: AsyncSession) -> str:
+        """Resolve which container to use for command execution.
+
+        Priority:
+        1. PlatformSettings.container_name (set via Settings UI)
+        2. settings.DEFAULT_CONTAINER_NAME (config default)
+        3. Auto-discover any running container matching CONTAINER_PREFIX_FILTER
+
+        Falls back to auto-discovery when the configured container is not running,
+        which covers the Exegol mode where aida-pentest is not started.
+        """
+        stmt = select(PlatformSettings).filter(PlatformSettings.key == "container_name")
+        result = await db.execute(stmt)
+        container_setting = result.scalar_one_or_none()
+
+        configured = (
+            container_setting.value
+            if (container_setting and container_setting.value)
+            else settings.DEFAULT_CONTAINER_NAME
+        )
+
+        # Check if configured container is actually running
+        containers = await self.discover_containers()
+        running = [c for c in containers if c["status"] == "running"]
+
+        if any(c["name"] == configured for c in running):
+            return configured
+
+        # Configured container not running — auto-discover a running one
+        if running:
+            selected = running[0]["name"]
+            logger.info(
+                "Configured container not running, auto-selecting running container",
+                configured=configured,
+                selected=selected
+            )
+            return selected
+
+        # Nothing running — return configured and let validation produce a clear error
+        return configured
+
     async def execute_and_log_command(
         self,
         assessment_id: int,
@@ -336,17 +377,7 @@ class ContainerService:
             else:
                 timeout = settings.COMMAND_TIMEOUT
 
-        # Get container name from database settings, or fall back to config default
-        stmt = select(PlatformSettings).filter(
-            PlatformSettings.key == "container_name"
-        )
-        result = await db.execute(stmt)
-        container_setting = result.scalar_one_or_none()
-
-        if container_setting and container_setting.value:
-            self.current_container = container_setting.value
-        else:
-            self.current_container = settings.DEFAULT_CONTAINER_NAME
+        self.current_container = await self._resolve_active_container(db)
 
         # Get workspace_path from assessment to execute commands in the right directory
         stmt = select(Assessment).filter(Assessment.id == assessment_id)
@@ -604,14 +635,7 @@ class ContainerService:
             except ValueError:
                 timeout = settings.COMMAND_TIMEOUT
 
-        # --- Resolve container from DB settings ---
-        stmt = select(PlatformSettings).filter(PlatformSettings.key == "container_name")
-        result = await db.execute(stmt)
-        container_setting = result.scalar_one_or_none()
-        self.current_container = (
-            container_setting.value if (container_setting and container_setting.value)
-            else settings.DEFAULT_CONTAINER_NAME
-        )
+        self.current_container = await self._resolve_active_container(db)
 
         # --- Resolve workspace path from assessment ---
         stmt = select(Assessment).filter(Assessment.id == assessment_id)
@@ -871,14 +895,7 @@ except Exception as _e:
             except ValueError:
                 timeout = settings.COMMAND_TIMEOUT
 
-        # --- Resolve container ---
-        stmt = select(PlatformSettings).filter(PlatformSettings.key == "container_name")
-        result = await db.execute(stmt)
-        container_setting = result.scalar_one_or_none()
-        self.current_container = (
-            container_setting.value if (container_setting and container_setting.value)
-            else settings.DEFAULT_CONTAINER_NAME
-        )
+        self.current_container = await self._resolve_active_container(db)
 
         # --- Resolve workspace path ---
         stmt = select(Assessment).filter(Assessment.id == assessment_id)
