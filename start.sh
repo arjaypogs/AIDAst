@@ -73,16 +73,21 @@ fi
 check_port() {
     local port=$1
     local service=$2
-    # Use lsof (macOS/Linux) or ss (Linux fallback)
+    # Docker runtimes (OrbStack, Docker Desktop) forward container ports through
+    # their own process — they will always show up on our ports. Not a conflict.
+    local docker_runtimes="OrbStack|com.docker|dockerd|Docker"
+
     if command -v lsof &>/dev/null; then
-        if lsof -iTCP:"$port" -sTCP:LISTEN -P -n 2>/dev/null | grep -q LISTEN; then
-            local process=$(lsof -iTCP:"$port" -sTCP:LISTEN -P -n 2>/dev/null | awk 'NR==2 {print $1}')
+        local process
+        process=$(lsof -iTCP:"$port" -sTCP:LISTEN -P -n 2>/dev/null | awk 'NR==2 {print $1}')
+        if [[ -n "$process" ]] && ! echo "$process" | grep -qE "$docker_runtimes"; then
             warn "Port $port ($service) is already in use by: $process"
             return 1
         fi
     elif command -v ss &>/dev/null; then
-        if ss -tlnp 2>/dev/null | grep -q ":$port "; then
-            local process=$(ss -tlnp 2>/dev/null | grep ":$port " | sed 's/.*users:(("\([^"]*\)".*/\1/')
+        local process
+        process=$(ss -tlnp 2>/dev/null | grep ":$port " | sed 's/.*users:(("\([^"]*\)".*/\1/')
+        if [[ -n "$process" ]] && ! echo "$process" | grep -qE "$docker_runtimes"; then
             warn "Port $port ($service) is already in use by: $process"
             return 1
         fi
@@ -110,12 +115,26 @@ if [[ "$PORT_CONFLICT" == "true" ]]; then
 fi
 
 # ==============================================================================
+# CONTAINER MODE (read early — needed before the "already running" branch)
+# ==============================================================================
+
+CONTAINER_PREFS_FILE="$SCRIPT_DIR/.aida/container-preference"
+CONTAINER_MODE=$(cat "$CONTAINER_PREFS_FILE" 2>/dev/null || echo "aida-pentest")
+
+# ==============================================================================
 # CHECK IF ALREADY RUNNING
 # ==============================================================================
 
 CONTAINERS_RUNNING=$($COMPOSE_CMD ps --status running -q 2>/dev/null | wc -l | tr -d ' ')
 
-if [[ "$CONTAINERS_RUNNING" -ge 3 ]] && [[ "$FORCE_BUILD" == "false" ]]; then
+if [[ "$CONTAINERS_RUNNING" -ge 3 ]]; then
+    # Still build — cache makes it instant if nothing changed, but picks up
+    # any Dockerfile edits automatically without needing --build.
+    if [[ "$CONTAINER_MODE" == "aida-pentest" ]]; then
+        $COMPOSE_CMD build --quiet
+    else
+        $COMPOSE_CMD build --quiet backend frontend
+    fi
     log "AIDA is already running!"
     echo ""
     $COMPOSE_CMD ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
@@ -123,7 +142,6 @@ if [[ "$CONTAINERS_RUNNING" -ge 3 ]] && [[ "$FORCE_BUILD" == "false" ]]; then
     log "Frontend: http://localhost:5173"
     log "Backend:  http://localhost:8000"
     echo ""
-    warn "Use --build to force rebuild, or ./restart.sh to restart"
     exit 0
 fi
 
@@ -150,7 +168,6 @@ fi
 # FIRST-RUN: CONTAINER MODE SELECTION
 # ==============================================================================
 
-CONTAINER_PREFS_FILE="$SCRIPT_DIR/.aida/container-preference"
 mkdir -p "$SCRIPT_DIR/.aida"
 
 if [[ ! -f "$CONTAINER_PREFS_FILE" ]]; then
@@ -183,9 +200,9 @@ if [[ ! -f "$CONTAINER_PREFS_FILE" ]]; then
         echo "aida-pentest" > "$CONTAINER_PREFS_FILE"
         log "aida-pentest selected — the built-in container will start automatically."
     fi
+    # Re-read now that the file exists
+    CONTAINER_MODE=$(cat "$CONTAINER_PREFS_FILE" 2>/dev/null || echo "aida-pentest")
 fi
-
-CONTAINER_MODE=$(cat "$CONTAINER_PREFS_FILE" 2>/dev/null || echo "aida-pentest")
 
 # ==============================================================================
 # PYTHON ENVIRONMENTS (Only if missing)
@@ -253,27 +270,15 @@ if [[ -n "$VOLUME_EXISTS" ]]; then
     fi
 fi
 
-# Check if images exist
-BACKEND_IMAGE=$(docker images -q aida-backend 2>/dev/null)
-FRONTEND_IMAGE=$(docker images -q aida-frontend 2>/dev/null)
-PENTEST_IMAGE=$(docker images -q aida-aida-pentest 2>/dev/null)
-
-BUILD_NEEDED=false
-[[ -z "$BACKEND_IMAGE" || -z "$FRONTEND_IMAGE" ]] && BUILD_NEEDED=true
-[[ "$CONTAINER_MODE" == "aida-pentest" && -z "$PENTEST_IMAGE" ]] && BUILD_NEEDED=true
-[[ "$FORCE_BUILD" == "true" ]] && BUILD_NEEDED=true
-
-if [[ "$BUILD_NEEDED" == "true" ]]; then
-    if [[ "$CONTAINER_MODE" == "aida-pentest" ]]; then
-        log "Building Docker images (first build of aida-pentest may take a few minutes)..."
-        $COMPOSE_CMD build --quiet
-    else
-        log "Building Docker images..."
-        $COMPOSE_CMD build --quiet backend frontend
-    fi
-    log "Images built"
+# Always build — Docker layer cache makes this instant when nothing changed.
+# This ensures Dockerfile changes (e.g. node_modules cache) are picked up
+# automatically without needing --build.
+if [[ "$CONTAINER_MODE" == "aida-pentest" ]]; then
+    log "Building Docker images..."
+    $COMPOSE_CMD build --quiet
 else
-    log "Docker images already exist (use --build to rebuild)"
+    log "Building Docker images..."
+    $COMPOSE_CMD build --quiet backend frontend
 fi
 
 # ==============================================================================
@@ -281,25 +286,20 @@ fi
 # ==============================================================================
 
 # Check current state
-STOPPED_CONTAINERS=$($COMPOSE_CMD ps --status exited -q 2>/dev/null | wc -l | tr -d ' ')
 RUNNING_CONTAINERS=$($COMPOSE_CMD ps --status running -q 2>/dev/null | wc -l | tr -d ' ')
 
 if [[ "$RUNNING_CONTAINERS" -ge 3 ]]; then
     log "Containers already running"
-elif [[ "$STOPPED_CONTAINERS" -gt 0 ]]; then
-    log "Starting existing containers..."
-    if [[ "$CONTAINER_MODE" == "aida-pentest" ]]; then
-        $COMPOSE_CMD start 2>/dev/null
-    else
-        $COMPOSE_CMD start postgres backend frontend 2>/dev/null
-    fi
 else
-    log "Creating and starting containers..."
-    # Suppress volume warning (cosmetic - data is preserved)
+    # Always use 'up -d' instead of 'start':
+    # - recreates containers if the image/config changed (e.g. coming back from prod/LAN mode)
+    # - creates fresh containers if they don't exist
+    # - does nothing if already running
+    log "Starting containers..."
     if [[ "$CONTAINER_MODE" == "aida-pentest" ]]; then
-        $COMPOSE_CMD up -d 2>&1 | grep -v "already exists but was created for project" || true
+        $COMPOSE_CMD up -d --remove-orphans 2>&1 | grep -v "already exists but was created for project" || true
     else
-        $COMPOSE_CMD up -d postgres backend frontend 2>&1 | grep -v "already exists but was created for project" || true
+        $COMPOSE_CMD up -d --remove-orphans postgres backend frontend 2>&1 | grep -v "already exists but was created for project" || true
     fi
 fi
 
@@ -327,9 +327,9 @@ wait_for_service() {
     echo -e "${GREEN}Ready${NC}"
 }
 
-wait_for_service "PostgreSQL" "$COMPOSE_CMD exec -T postgres pg_isready -U aida"
-wait_for_service "Backend" "curl -sf http://localhost:8000/health"
-wait_for_service "Frontend" "curl -sf http://localhost:5173"
+wait_for_service "PostgreSQL" "$COMPOSE_CMD exec -T postgres pg_isready -U aida" 30
+wait_for_service "Backend"    "curl -sf http://localhost:8000/health"              60
+wait_for_service "Frontend"   "curl -sf http://localhost:5173"                     120
 
 # ==============================================================================
 # HOST HELPER (Background)
@@ -347,14 +347,10 @@ fi
 
 if [[ "$CONTAINER_MODE" == "exegol" ]]; then
     EXEGOL_RUNNING=$(docker ps --format "{{.Names}}" 2>/dev/null | grep -i "^exegol-" || true)
-    if [[ -z "$EXEGOL_RUNNING" ]]; then
-        echo ""
-        warn "No Exegol container running!"
-        warn "Start one with:      exegol start <name>"
-        warn "Switch to built-in:  rm .aida/container-preference && ./start.sh"
-    else
+    if [[ -n "$EXEGOL_RUNNING" ]]; then
         log "Exegol container: $EXEGOL_RUNNING"
     fi
+    # No warning if Exegol isn't running — user manages it separately
 else
     PENTEST_RUNNING=$(docker ps --format "{{.Names}}" 2>/dev/null | grep "^aida-pentest$" || true)
     if [[ -z "$PENTEST_RUNNING" ]]; then

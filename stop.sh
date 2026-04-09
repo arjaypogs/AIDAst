@@ -57,14 +57,23 @@ if [[ "$RUNNING" -eq 0 ]]; then
     exit 0
 fi
 
-# Stop containers
+# Detect active mode: if port 31337 is mapped, prod stack is running
+if $COMPOSE_CMD -f docker-compose.yml -f docker-compose.prod.yml ps --format "{{.Ports}}" 2>/dev/null | grep -q "31337"; then
+    log "Prod/LAN stack detected — stopping with prod compose files..."
+    STOP_FILES="-f docker-compose.yml -f docker-compose.prod.yml"
+else
+    STOP_FILES=""
+fi
+
 log "Stopping $RUNNING container(s)..."
-$COMPOSE_CMD stop
+# Use 'stop' (not 'down') — containers are kept, volumes untouched, data safe
+$COMPOSE_CMD $STOP_FILES stop
 
 # Verify
 echo ""
-log "All containers stopped"
-$COMPOSE_CMD ps --format "table {{.Name}}\t{{.Status}}"
+log "All containers stopped — data preserved"
+$COMPOSE_CMD $STOP_FILES ps --format "table {{.Name}}\t{{.Status}}"
 echo ""
-log "Data preserved. To restart: ./start.sh"
+log "To restart dev:  ./start.sh"
+log "To restart LAN:  ./start-lan.sh"
 echo ""

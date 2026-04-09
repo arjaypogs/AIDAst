@@ -78,9 +78,18 @@ wait_for_service() {
     echo -e "${GREEN}Ready${NC}"
 }
 
-wait_for_service "PostgreSQL" "$COMPOSE_CMD exec -T postgres pg_isready -U aida"
-wait_for_service "Backend" "curl -sf http://localhost:8000/health"
-wait_for_service "Frontend" "curl -sf http://localhost:5173"
+wait_for_service "PostgreSQL" "$COMPOSE_CMD exec -T postgres pg_isready -U aida" 30
+wait_for_service "Backend"    "curl -sf http://localhost:8000/health"              60
+
+# Frontend check: port 31337 (prod/Nginx) or 5173 (dev/Vite)
+if curl -sf http://localhost:31337 &>/dev/null 2>&1 || \
+   $COMPOSE_CMD ps --format "{{.Ports}}" 2>/dev/null | grep -q "31337"; then
+    FRONTEND_URL="http://localhost:31337"
+    wait_for_service "Frontend" "curl -sf http://localhost:31337" 60
+else
+    FRONTEND_URL="http://localhost:5173"
+    wait_for_service "Frontend" "curl -sf http://localhost:5173"  120
+fi
 
 # Success
 section "AIDA Restarted"
@@ -88,6 +97,6 @@ section "AIDA Restarted"
 echo ""
 $COMPOSE_CMD ps --format "table {{.Name}}\t{{.Status}}"
 echo ""
-log "Frontend:  http://localhost:5173"
-log "Backend:   http://localhost:8000"
+log "Frontend : $FRONTEND_URL"
+log "Backend  : http://localhost:8000"
 echo ""
