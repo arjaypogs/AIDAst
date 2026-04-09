@@ -20,20 +20,7 @@ Also needed for AI integration:
 
 ## Platform Setup
 
-### Quick Install (Docker Hub)
-
-No clone needed — pre-built images, one command:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/Vasco0x4/AIDA/main/docker-compose.hub.yml -o docker-compose.yml
-docker compose up -d
-```
-
-Open **http://localhost:31337** — done.
-
-> To share on your LAN: `FRONTEND_BIND=0.0.0.0 docker compose up -d`
-
-### From Source
+### Step 1: Clone & Start
 
 ```bash
 git clone https://github.com/Vasco0x4/AIDA.git
@@ -42,6 +29,8 @@ cd AIDA
 ```
 
 Open **http://localhost:31337** — production mode (Nginx) by default.
+
+Pre-built images are pulled from Docker Hub — no local build needed.
 
 This starts:
 - **PostgreSQL** on port `5432` - The database

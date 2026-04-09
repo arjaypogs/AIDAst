@@ -88,24 +88,15 @@ Without execution capabilities, security testing becomes a tedious back-and-fort
 - **Docker Desktop** - To run the platform
 - **An AI Client** - Claude Desktop, Claude Code, Gemini CLI, Antigravity... pick your favorite
 
-### Option A: Docker Hub (no clone needed)
-
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Vasco0x4/AIDA/main/docker-compose.hub.yml -o docker-compose.yml
-docker compose up -d
-```
-
-Open **http://localhost:31337** — done.
-
-### Option B: From source
-
-```bash
+# Clone & start
 git clone https://github.com/Vasco0x4/AIDA.git
 cd AIDA
 ./start.sh
-```
 
-Open **http://localhost:31337** — production mode by default (Nginx).
+# Open the dashboard
+open http://localhost:31337
+```
 
 > **Contributors:** use `./start.sh --dev` for Vite hot reload on `localhost:5173`.
 > **LAN access:** use `./start.sh --lan` to share with your team.
