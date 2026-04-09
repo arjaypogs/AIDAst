@@ -1,0 +1,103 @@
+# =============================================================================
+# AIDA — Docker Hub (pre-built images, no git clone needed)
+# =============================================================================
+#
+# Quick start:
+#   curl -fsSL https://raw.githubusercontent.com/Vasco0x4/AIDA/main/docker-compose.hub.yml -o docker-compose.yml
+#   docker compose up -d
+#   open http://localhost:31337
+#
+# LAN access (share with your team):
+#   FRONTEND_BIND=0.0.0.0 docker compose up -d
+#
+# =============================================================================
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: aida_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: aida
+      POSTGRES_PASSWORD: aida_secure_password_change_me
+      POSTGRES_DB: aida_assessments
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - aida-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aida"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    image: vasco0x4/aida-backend:latest
+    container_name: aida_backend
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: aida
+      POSTGRES_PASSWORD: aida_secure_password_change_me
+      POSTGRES_DB: aida_assessments
+      POSTGRES_HOST: postgres
+      BACKEND_CORS_ORIGINS: "http://localhost:31337,http://127.0.0.1:31337"
+      ENVIRONMENT: production
+      DEFAULT_CONTAINER_NAME: aida-pentest
+      CONTAINER_WORKSPACE_BASE: /workspace
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - backend_logs:/app/logs
+    networks:
+      - aida-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  frontend:
+    image: vasco0x4/aida-frontend:latest
+    container_name: aida_frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_BIND:-127.0.0.1}:31337:80"
+    networks:
+      - aida-network
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  aida-pentest:
+    image: vasco0x4/aida-pentest:latest
+    container_name: aida-pentest
+    restart: unless-stopped
+    tty: true
+    stdin_open: true
+    volumes:
+      - workspaces:/workspace
+    networks:
+      - aida-network
+
+volumes:
+  postgres_data:
+    name: aida_postgres_data
+  backend_logs:
+  workspaces:
+
+networks:
+  aida-network:
+    name: aida-network
+    driver: bridge

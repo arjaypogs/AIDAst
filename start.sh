@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# AIDA - Docker Startup Script
+# AIDA - Startup Script
 # ==============================================================================
-# Starts the AIDA platform. Smart detection: skips build if already done.
+# Single entry point for all modes:
+#   ./start.sh            Production (Nginx on localhost:31337)
+#   ./start.sh --lan      Production + LAN accessible (0.0.0.0:31337)
+#   ./start.sh --dev      Development (Vite hot reload on localhost:5173)
 # ==============================================================================
 
 set -euo pipefail
@@ -22,16 +25,28 @@ section() { echo -e "\n${BLUE}════════════════�
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR"
 
-# Parse arguments
-FORCE_BUILD=false
+# ==============================================================================
+# PARSE ARGUMENTS
+# ==============================================================================
+
+MODE="prod"
+BIND="127.0.0.1"
 SKIP_CHECKS=false
+
 for arg in "$@"; do
     case $arg in
-        --build|-b)   FORCE_BUILD=true ;;
+        --dev|-d)     MODE="dev" ;;
+        --lan|-l)     BIND="0.0.0.0" ;;
         --fast|-f)    SKIP_CHECKS=true ;;
         --help|-h)
             echo "Usage: ./start.sh [OPTIONS]"
-            echo "  --build, -b    Force rebuild Docker images"
+            echo ""
+            echo "Modes:"
+            echo "  (default)      Production — Nginx on localhost:31337"
+            echo "  --lan, -l      Production + LAN accessible (0.0.0.0:31337)"
+            echo "  --dev, -d      Development — Vite hot reload on localhost:5173"
+            echo ""
+            echo "Options:"
             echo "  --fast, -f     Skip dependency checks (faster startup)"
             echo "  --help, -h     Show this help"
             exit 0
@@ -39,13 +54,31 @@ for arg in "$@"; do
     esac
 done
 
-section "AIDA - Starting Platform"
+# ==============================================================================
+# MODE-SPECIFIC CONFIG
+# ==============================================================================
+
+AIDA_PORT=31337
+
+if [[ "$MODE" == "dev" ]]; then
+    COMPOSE_FILES=""
+    FRONTEND_PORT=5173
+    FRONTEND_URL="http://localhost:5173"
+    MODE_LABEL="Development"
+else
+    COMPOSE_FILES="-f docker-compose.yml -f docker-compose.prod.yml"
+    FRONTEND_PORT=$AIDA_PORT
+    FRONTEND_URL="http://localhost:${AIDA_PORT}"
+    MODE_LABEL="Production"
+    export FRONTEND_BIND="$BIND"
+fi
+
+section "AIDA - ${MODE_LABEL} Mode"
 
 # ==============================================================================
 # QUICK CHECKS
 # ==============================================================================
 
-# Docker check
 if ! command -v docker &> /dev/null; then
     error "Docker not installed. Get it from: https://docker.com/products/docker-desktop"
     exit 1
@@ -64,6 +97,36 @@ elif command -v docker-compose &>/dev/null; then
 else
     error "Docker Compose not found. Install: sudo apt install docker-compose"
     exit 1
+fi
+
+# Build the full compose command for this mode
+if [[ -n "$COMPOSE_FILES" ]]; then
+    COMPOSE="$COMPOSE_CMD $COMPOSE_FILES"
+else
+    COMPOSE="$COMPOSE_CMD"
+fi
+
+# ==============================================================================
+# TEAR DOWN OTHER MODE (if switching)
+# ==============================================================================
+
+# If we're starting prod and dev containers are running (or vice versa), stop them first.
+if [[ "$MODE" == "dev" ]]; then
+    # Check if prod stack is running (port 31337 mapped)
+    if $COMPOSE_CMD -f docker-compose.yml -f docker-compose.prod.yml ps --format "{{.Ports}}" 2>/dev/null | grep -q "31337"; then
+        warn "Prod stack running — tearing down to switch to dev mode..."
+        $COMPOSE_CMD -f docker-compose.yml -f docker-compose.prod.yml down --timeout 15
+        log "Prod stack stopped — data preserved"
+        sleep 1
+    fi
+else
+    # Check if dev stack is running (port 5173 mapped)
+    if $COMPOSE_CMD ps --format "{{.Ports}}" 2>/dev/null | grep -q "5173"; then
+        warn "Dev stack running — tearing down to switch to prod mode..."
+        $COMPOSE_CMD down --timeout 15
+        log "Dev stack stopped — data preserved"
+        sleep 1
+    fi
 fi
 
 # ==============================================================================
@@ -96,16 +159,13 @@ check_port() {
 }
 
 PORT_CONFLICT=false
-check_port 5432 "PostgreSQL" || PORT_CONFLICT=true
-check_port 8000 "Backend"    || PORT_CONFLICT=true
-check_port 5173 "Frontend"   || PORT_CONFLICT=true
+check_port 5432           "PostgreSQL" || PORT_CONFLICT=true
+check_port 8000           "Backend"    || PORT_CONFLICT=true
+check_port $FRONTEND_PORT "Frontend"   || PORT_CONFLICT=true
 
 if [[ "$PORT_CONFLICT" == "true" ]]; then
     echo ""
-    warn "Port conflict detected! Options:"
-    warn "  1. Stop the conflicting process"
-    warn "  2. Change ports in docker-compose.yml"
-    echo ""
+    warn "Port conflict detected!"
     read -p "Continue anyway? (y/N): " -n 1 -r
     echo
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
@@ -115,31 +175,30 @@ if [[ "$PORT_CONFLICT" == "true" ]]; then
 fi
 
 # ==============================================================================
-# CONTAINER MODE (read early — needed before the "already running" branch)
+# CONTAINER MODE (aida-pentest or exegol)
 # ==============================================================================
 
 CONTAINER_PREFS_FILE="$SCRIPT_DIR/.aida/container-preference"
+mkdir -p "$SCRIPT_DIR/.aida"
 CONTAINER_MODE=$(cat "$CONTAINER_PREFS_FILE" 2>/dev/null || echo "aida-pentest")
 
+# Default to aida-pentest on first run (no interactive prompt)
+if [[ ! -f "$CONTAINER_PREFS_FILE" ]]; then
+    echo "aida-pentest" > "$CONTAINER_PREFS_FILE"
+fi
+
 # ==============================================================================
-# CHECK IF ALREADY RUNNING
+# CHECK IF ALREADY RUNNING (same mode)
 # ==============================================================================
 
-CONTAINERS_RUNNING=$($COMPOSE_CMD ps --status running -q 2>/dev/null | wc -l | tr -d ' ')
+CONTAINERS_RUNNING=$($COMPOSE ps --status running -q 2>/dev/null | wc -l | tr -d ' ')
 
 if [[ "$CONTAINERS_RUNNING" -ge 3 ]]; then
-    # Still build — cache makes it instant if nothing changed, but picks up
-    # any Dockerfile edits automatically without needing --build.
-    if [[ "$CONTAINER_MODE" == "aida-pentest" ]]; then
-        $COMPOSE_CMD build --quiet
-    else
-        $COMPOSE_CMD build --quiet backend frontend
-    fi
-    log "AIDA is already running!"
+    log "AIDA is already running! (${MODE_LABEL})"
     echo ""
-    $COMPOSE_CMD ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
+    $COMPOSE ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
     echo ""
-    log "Frontend: http://localhost:5173"
+    log "Frontend: $FRONTEND_URL"
     log "Backend:  http://localhost:8000"
     echo ""
     exit 0
@@ -159,53 +218,13 @@ if [[ ! -f backend/.env ]]; then
     fi
 fi
 
-if [[ ! -f frontend/.env ]]; then
+if [[ "$MODE" == "dev" ]] && [[ ! -f frontend/.env ]]; then
     echo "VITE_API_URL=http://localhost:8000/api" > frontend/.env
     log "Created frontend/.env"
 fi
 
 # ==============================================================================
-# FIRST-RUN: CONTAINER MODE SELECTION
-# ==============================================================================
-
-mkdir -p "$SCRIPT_DIR/.aida"
-
-if [[ ! -f "$CONTAINER_PREFS_FILE" ]]; then
-    section "First-Run Setup"
-    echo ""
-    echo "  AIDA needs a pentesting container to run security tools."
-    echo ""
-    echo "  [1] aida-pentest  (Recommended)"
-    echo "      Built-in, managed by AIDA — starts automatically with ./start.sh"
-    echo "      Size: ~2 GB |  Tools: nmap, ffuf, gobuster, sqlmap, nikto..."
-    echo ""
-    echo "  [2] Exegol"
-    echo "      Third-party, requires separate install: https://docs.exegol.com"
-    echo "      Size: ~20-40 GB  |  Tools: ~400+ security tools"
-    echo ""
-    echo "  You can always switch containers in Settings."
-    echo ""
-    read -p "  Your choice [1/2, default=1]: " -n 1 -r CONTAINER_CHOICE
-    echo ""
-    echo ""
-
-    if [[ "$CONTAINER_CHOICE" == "2" ]]; then
-        echo "exegol" > "$CONTAINER_PREFS_FILE"
-        warn "Exegol mode selected."
-        warn "Make sure Exegol is installed and a container is running before using AIDA:"
-        warn "  Install: https://docs.exegol.com/first-install"
-        warn "  Start:   exegol start aida"
-        echo ""
-    else
-        echo "aida-pentest" > "$CONTAINER_PREFS_FILE"
-        log "aida-pentest selected — the built-in container will start automatically."
-    fi
-    # Re-read now that the file exists
-    CONTAINER_MODE=$(cat "$CONTAINER_PREFS_FILE" 2>/dev/null || echo "aida-pentest")
-fi
-
-# ==============================================================================
-# PYTHON ENVIRONMENTS (Only if missing)
+# PYTHON ENVIRONMENTS (Only if missing — needed for MCP server on host)
 # ==============================================================================
 
 if [[ "$SKIP_CHECKS" == "false" ]]; then
@@ -238,7 +257,38 @@ if [[ "$SKIP_CHECKS" == "false" ]]; then
 fi
 
 # ==============================================================================
-# DOCKER - Smart Build
+# LAN MODE — detect IP and set CORS
+# ==============================================================================
+
+HOST_IP=""
+if [[ "$BIND" == "0.0.0.0" ]]; then
+    # macOS: try common interfaces
+    if command -v ipconfig &>/dev/null; then
+        for iface in en0 en1 en2 en3; do
+            candidate=$(ipconfig getifaddr "$iface" 2>/dev/null || true)
+            if [[ -n "$candidate" ]]; then
+                HOST_IP="$candidate"
+                break
+            fi
+        done
+    fi
+    # Linux fallback
+    if [[ -z "$HOST_IP" ]] && command -v hostname &>/dev/null; then
+        HOST_IP=$(hostname -I 2>/dev/null | awk '{print $1}' || true)
+    fi
+    # Manual fallback
+    if [[ -z "$HOST_IP" ]]; then
+        warn "Could not auto-detect LAN IP."
+        read -rp "Enter your machine's LAN IP (e.g. 192.168.1.10): " HOST_IP
+    fi
+
+    log "LAN IP: $HOST_IP"
+    export BACKEND_CORS_ORIGINS="http://${HOST_IP}:${AIDA_PORT},http://localhost:${AIDA_PORT},http://127.0.0.1:${AIDA_PORT}"
+    FRONTEND_URL="http://${HOST_IP}:${AIDA_PORT}"
+fi
+
+# ==============================================================================
+# DOCKER — Smart Build
 # ==============================================================================
 
 section "Docker Containers"
@@ -248,8 +298,7 @@ ORPHAN_POSTGRES=$(docker ps -a --format "{{.Names}}" | grep "^aida_postgres$" ||
 ORPHAN_BACKEND=$(docker ps -a --format "{{.Names}}" | grep "^aida_backend$" || true)
 ORPHAN_FRONTEND=$(docker ps -a --format "{{.Names}}" | grep "^aida_frontend$" || true)
 
-# Check if these containers belong to our project
-OUR_CONTAINERS=$($COMPOSE_CMD ps -a -q 2>/dev/null | wc -l | tr -d ' ')
+OUR_CONTAINERS=$($COMPOSE ps -a -q 2>/dev/null | wc -l | tr -d ' ')
 
 if [[ -n "$ORPHAN_POSTGRES" || -n "$ORPHAN_BACKEND" || -n "$ORPHAN_FRONTEND" ]] && [[ "$OUR_CONTAINERS" -eq 0 ]]; then
     warn "Found containers from another project with same names"
@@ -258,48 +307,49 @@ if [[ -n "$ORPHAN_POSTGRES" || -n "$ORPHAN_BACKEND" || -n "$ORPHAN_FRONTEND" ]] 
     log "Orphan containers removed"
 fi
 
-# Check if volume exists but belongs to another project - recreate it for this project
-VOLUME_EXISTS=$(docker volume ls -q | grep "^aida_postgres_data$" || true)
-if [[ -n "$VOLUME_EXISTS" ]]; then
-    # Volume exists - check if it's labeled for another project
-    VOLUME_PROJECT=$(docker volume inspect aida_postgres_data --format '{{index .Labels "com.docker.compose.project"}}' 2>/dev/null || true)
-    if [[ -n "$VOLUME_PROJECT" && "$VOLUME_PROJECT" != "aida" ]]; then
-        log "Adopting existing postgres volume from project '$VOLUME_PROJECT'"
-        # Remove old labels by recreating volume metadata (data preserved)
-        # Docker compose will re-label it on next up
+# Dev mode: always build from source (hot reload needs local code)
+# Prod mode: pull pre-built images from Docker Hub (instant start)
+#            fall back to local build if pull fails (Hub not set up yet)
+if [[ "$MODE" == "dev" ]]; then
+    log "Building Docker images from source..."
+    if [[ "$CONTAINER_MODE" == "aida-pentest" ]]; then
+        $COMPOSE build --quiet
+    else
+        $COMPOSE build --quiet backend frontend
     fi
-fi
-
-# Always build — Docker layer cache makes this instant when nothing changed.
-# This ensures Dockerfile changes (e.g. node_modules cache) are picked up
-# automatically without needing --build.
-if [[ "$CONTAINER_MODE" == "aida-pentest" ]]; then
-    log "Building Docker images..."
-    $COMPOSE_CMD build --quiet
 else
-    log "Building Docker images..."
-    $COMPOSE_CMD build --quiet backend frontend
+    log "Pulling Docker images..."
+    if $COMPOSE pull --quiet 2>/dev/null; then
+        log "Images pulled from Docker Hub"
+    else
+        warn "Pull failed — building from source (first run may take a few minutes)..."
+        if [[ "$CONTAINER_MODE" == "aida-pentest" ]]; then
+            $COMPOSE build --quiet
+        else
+            $COMPOSE build --quiet backend frontend
+        fi
+    fi
 fi
 
 # ==============================================================================
 # START CONTAINERS
 # ==============================================================================
 
-# Check current state
-RUNNING_CONTAINERS=$($COMPOSE_CMD ps --status running -q 2>/dev/null | wc -l | tr -d ' ')
+RUNNING_CONTAINERS=$($COMPOSE ps --status running -q 2>/dev/null | wc -l | tr -d ' ')
 
 if [[ "$RUNNING_CONTAINERS" -ge 3 ]]; then
     log "Containers already running"
 else
-    # Always use 'up -d' instead of 'start':
-    # - recreates containers if the image/config changed (e.g. coming back from prod/LAN mode)
-    # - creates fresh containers if they don't exist
-    # - does nothing if already running
     log "Starting containers..."
-    if [[ "$CONTAINER_MODE" == "aida-pentest" ]]; then
-        $COMPOSE_CMD up -d --remove-orphans 2>&1 | grep -v "already exists but was created for project" || true
+    if [[ "$MODE" == "dev" ]]; then
+        # Dev mode — set ENVIRONMENT so backend uses --reload
+        ENVIRONMENT=development $COMPOSE up -d --remove-orphans 2>&1 | grep -v "already exists but was created for project" || true
     else
-        $COMPOSE_CMD up -d --remove-orphans postgres backend frontend 2>&1 | grep -v "already exists but was created for project" || true
+        if [[ "$CONTAINER_MODE" == "aida-pentest" ]]; then
+            $COMPOSE up -d --remove-orphans 2>&1 | grep -v "already exists but was created for project" || true
+        else
+            $COMPOSE up -d --remove-orphans postgres backend frontend 2>&1 | grep -v "already exists but was created for project" || true
+        fi
     fi
 fi
 
@@ -327,16 +377,21 @@ wait_for_service() {
     echo -e "${GREEN}Ready${NC}"
 }
 
-wait_for_service "PostgreSQL" "$COMPOSE_CMD exec -T postgres pg_isready -U aida" 30
-wait_for_service "Backend"    "curl -sf http://localhost:8000/health"              60
-wait_for_service "Frontend"   "curl -sf http://localhost:5173"                     120
+wait_for_service "PostgreSQL" "$COMPOSE exec -T postgres pg_isready -U aida" 30
+wait_for_service "Backend"    "curl -sf http://localhost:8000/health"         60
+
+if [[ "$MODE" == "dev" ]]; then
+    wait_for_service "Frontend" "curl -sf http://localhost:5173" 120
+else
+    wait_for_service "Frontend" "curl -sf http://localhost:${AIDA_PORT}" 90
+fi
 
 # ==============================================================================
 # HOST HELPER (Background)
 # ==============================================================================
 
 pkill -f "tools/helper.py" 2>/dev/null || true
-pkill -f "folder_opener.py" 2>/dev/null || true  # legacy name, just in case
+pkill -f "folder_opener.py" 2>/dev/null || true
 if [[ -f "$SCRIPT_DIR/tools/helper.py" ]]; then
     python3 "$SCRIPT_DIR/tools/helper.py" &>/dev/null &
 fi
@@ -350,12 +405,11 @@ if [[ "$CONTAINER_MODE" == "exegol" ]]; then
     if [[ -n "$EXEGOL_RUNNING" ]]; then
         log "Exegol container: $EXEGOL_RUNNING"
     fi
-    # No warning if Exegol isn't running — user manages it separately
 else
     PENTEST_RUNNING=$(docker ps --format "{{.Names}}" 2>/dev/null | grep "^aida-pentest$" || true)
     if [[ -z "$PENTEST_RUNNING" ]]; then
         warn "aida-pentest not running — starting..."
-        $COMPOSE_CMD up -d aida-pentest 2>&1 | grep -v "already" || true
+        $COMPOSE up -d aida-pentest 2>&1 | grep -v "already" || true
     else
         log "Pentesting container: aida-pentest"
     fi
@@ -368,9 +422,15 @@ fi
 section "AIDA Ready"
 
 echo ""
-log "Frontend:  http://localhost:5173"
-log "Backend:   http://localhost:8000"
-log "API Docs:  http://localhost:8000/docs"
+log "Frontend : $FRONTEND_URL"
+log "Backend  : http://localhost:8000"
+log "API Docs : http://localhost:8000/docs"
+
+if [[ "$BIND" == "0.0.0.0" && -n "$HOST_IP" ]]; then
+    echo ""
+    echo -e "  ${BLUE}Share with your team →${NC}  http://${HOST_IP}:${AIDA_PORT}"
+fi
+
 echo ""
-$COMPOSE_CMD ps --format "table {{.Name}}\t{{.Status}}"
+$COMPOSE ps --format "table {{.Name}}\t{{.Status}}"
 echo ""

@@ -28,6 +28,7 @@ services:
 
   # FastAPI Backend
   backend:
+    image: vasco0x4/aida-backend:latest
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -38,6 +39,8 @@ services:
       # DB_HOST is set by switch-db.sh in root .env (default: postgres)
       POSTGRES_HOST: ${DB_HOST:-postgres}
       POSTGRES_DB: ${DB_NAME:-aida_assessments}
+      # Set to 'development' by start.sh --dev for hot reload
+      ENVIRONMENT: ${ENVIRONMENT:-production}
     ports:
       # Bind to localhost only — the API must not be reachable from the LAN.
       - "127.0.0.1:8000:8000"
@@ -66,6 +69,7 @@ services:
 
   # React Frontend
   frontend:
+    image: vasco0x4/aida-frontend:latest
     build:
       context: ./frontend
       dockerfile: Dockerfile
@@ -97,6 +101,7 @@ services:
   # Lightweight execution environment for AI-driven assessments.
   # The backend connects to this container via Docker socket (docker exec).
   aida-pentest:
+    image: vasco0x4/aida-pentest:latest
     build:
       context: ./pentest
       dockerfile: Dockerfile
