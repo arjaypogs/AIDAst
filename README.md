@@ -230,10 +230,14 @@ AIDA/
 │   └── src/components/  # Reusable UI components
 ├── pentest/             # Built-in pentesting container (aida-pentest)
 │   └── Dockerfile       # Ubuntu 22.04 + nmap, ffuf, gobuster, sqlmap...
-├── Docs/                # AI prompts and methodology
+├── Docs/                # Documentation and AI methodology
 ├── aida.py              # CLI launcher
-├── start.sh             # Start the platform
-└── docker-compose.yml   # Infrastructure
+├── start.sh             # Start the platform (dev mode)
+├── start-lan.sh         # Start in LAN/prod mode (Nginx on port 31337)
+├── stop.sh              # Stop all services (data preserved)
+├── restart.sh           # Restart all services
+├── docker-compose.yml   # Dev infrastructure
+└── docker-compose.prod.yml  # Prod/LAN overrides (Nginx reverse proxy)
 ```
 
 ---
@@ -254,20 +258,17 @@ AIDA/
 
 **AIDA is currently in alpha.** This means:
 
-- **Local use only recommended** - Do NOT expose the web interface publicly without additional security hardening
-- **No authentication system yet** - Anyone with access to the UI can view/modify assessments
+- **Local / LAN use only** - Do NOT expose the web interface to the public internet without additional security hardening
 - **Bugs and rough edges exist** - Some error messages use browser alerts, WebSocket reconnections may require manual refresh
 - **Database credentials** - Change defaults in `.env` before any deployment
 
 **This is a working prototype for early adopters and security professionals who understand the risks.**
 
 Improvements coming in future releases:
-- Proper authentication and user management system
 - Refined UI/UX (replacing alerts with modals)
-- Production-ready Docker configuration
 - Enhanced error handling
 
-**For now: Run locally, don't expose to internet, use at your own risk.**
+**For now: Run locally or on your LAN, don't expose to internet, use at your own risk.**
 
 Report bugs and request features: [GitHub Issues](https://github.com/Vasco0x4/AIDA/issues)
 

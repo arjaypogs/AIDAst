@@ -8,7 +8,7 @@ Technical deep dive into how AIDA works under the hood.
 
 AIDA is a multi-layer platform connecting AI assistants to pentesting environments:
 
-![System Overview](assets/doc/system-overview.png)
+![System Overview](../assets/doc/system-overview.png)
 
 ---
 

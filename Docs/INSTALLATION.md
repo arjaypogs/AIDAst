@@ -12,7 +12,6 @@ Before we start, make sure you have:
 |-------------|---------|-------|
 | **Docker Desktop** | Latest | `docker --version` |
 | **Python** | 3.10+ | `python3 --version` |
-| **Node.js** | 18+ | `node --version` |
 | **Git** | Any | `git --version` |
 
 Also needed:
@@ -320,6 +319,39 @@ Run through this checklist:
 | Pentest container | `docker ps \| grep aida-pentest` or `docker ps \| grep exegol` | Container running |
 | MCP server | Check AI client | AIDA tools visible |
 
+
+## Platform Scripts
+
+AIDA comes with management scripts for dev and production workflows:
+
+| Script | Description |
+|--------|-------------|
+| `./start.sh` | Start AIDA in dev mode (Vite on `:5173`, hot reload) |
+| `./start-lan.sh` | Start in LAN/prod mode (Nginx on `:31337`, accessible from network) |
+| `./stop.sh` | Stop all services — data is preserved |
+| `./restart.sh` | Restart all services and wait for health checks |
+
+**Dev mode** (`start.sh`): Frontend served by Vite with hot module reload. Best for development.
+
+**LAN/prod mode** (`start-lan.sh`): Frontend built and served via Nginx reverse proxy on port `31337`. Accessible from any device on your local network. The script auto-detects your LAN IP and configures CORS.
+
+Switching between modes is safe — your database and all data are preserved.
+
+```bash
+# Start dev
+./start.sh
+
+# Switch to LAN mode (stops dev first)
+./start-lan.sh
+
+# Stop everything
+./stop.sh
+
+# Restart current mode
+./restart.sh
+```
+
+---
 
 ## Troubleshooting
 

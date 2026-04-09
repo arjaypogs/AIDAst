@@ -43,7 +43,7 @@ Your assessment is now ready!
 
 ## 📁 Assessment Workspace
 
-Each assessment gets its own isolated workspace inside the Exegol container with a predefined folder structure:
+Each assessment gets its own isolated workspace inside the pentesting container with a predefined folder structure:
 
 ```
 /workspace/assessment-name/
@@ -181,7 +181,7 @@ The AI receives:
 
 ### Running Commands
 
-The AI executes commands directly in the Exegol container:
+The AI executes commands directly in the pentesting container:
 
 **Example commands:**
 ```bash
@@ -377,16 +377,13 @@ Folders help maintain organization across multiple concurrent assessments.
 **UI Preferences:**
 - Theme (light/dark)
 
-### Exegol Container
+### Pentesting Container
 
-AIDA automatically manages the Exegol pentesting container:
-- Container name: `exegol-aida` (configurable)
-- Workspace mount: `/workspace`
+AIDA manages the pentesting container automatically:
+- **aida-pentest** (default): `docker exec -it aida-pentest bash`
+- **Exegol** (if selected): `docker exec -it exegol-aida /bin/zsh`
 
-Access container directly:
-```bash
-docker exec -it exegol-aida /bin/zsh
-```
+Container name and workspace mount are configurable in **Settings → Container**.
 
 ---
 

@@ -8,7 +8,7 @@ Complete reference for all MCP tools available to AI clients.
 
 AIDA exposes tools through the Model Context Protocol (MCP). These tools give AI assistants the ability to:
 
-- Execute commands in Exegol containers
+- Execute commands in the pentesting container
 - Document findings and observations
 - Track reconnaissance data
 - Manage credentials
@@ -249,7 +249,7 @@ Three tools allow code execution inside the Exegol container. Each has its own i
 
 ### `execute`
 
-Execute any shell command in the Exegol container.
+Execute any shell command in the pentesting container.
 
 **Examples:**
 
@@ -281,7 +281,7 @@ execute(command="sqlmap -u 'https://target.com/api?id=1' --dbs --batch")
 
 ### `python_exec`
 
-Execute Python code directly inside the Exegol container via stdin, without shell escaping issues.
+Execute Python code directly inside the pentesting container via stdin, without shell escaping issues.
 
 **Examples:**
 
@@ -310,7 +310,7 @@ print(r.status_code, r.text[:500])
 
 **Notes:**
 - Code is passed via stdin — no shell escaping needed
-- All tools installed in Exegol are available (requests, scapy, impacket, etc.)
+- All tools installed in the pentesting container are available (requests, scapy, impacket, etc.)
 - Output is truncated to the `python_exec` output max length setting
 - Credential placeholders (`{{TOKEN}}`) are auto-substituted in the code
 
@@ -318,7 +318,7 @@ print(r.status_code, r.text[:500])
 
 ### `http_request`
 
-Make HTTP requests directly from the Exegol container. Useful for testing endpoints that require specific network routing, proxies, or certificates.
+Make HTTP requests directly from the pentesting container. Useful for testing endpoints that require specific network routing, proxies, or certificates.
 
 **Parameters:**
 
@@ -372,7 +372,7 @@ http_request(
 - Response time
 
 **Notes:**
-- Requests are made from within the Exegol container (internal network access)
+- Requests are made from within the pentesting container (internal network access)
 - Credential placeholders (`{{TOKEN}}`) are auto-substituted in headers and body
 - Commands may require approval based on settings
 
