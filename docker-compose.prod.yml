@@ -1,0 +1,30 @@
+# Production override — use with start-lan.sh or manually:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+#
+# Ports (prod vs dev):
+#   Frontend : 0.0.0.0:31337  (Nginx, LAN-accessible — unique AIDA port)
+#   Backend  : 127.0.0.1:8000 (same as dev, localhost-only — MCP clients on host still work)
+#   Postgres : 127.0.0.1:5432 (unchanged)
+
+services:
+  backend:
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      # Injected by start-lan.sh — includes LAN IP + localhost variants on port 31337
+      BACKEND_CORS_ORIGINS: "${BACKEND_CORS_ORIGINS:-http://localhost:31337,http://127.0.0.1:31337}"
+      ENVIRONMENT: production
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+    ports:
+      - "0.0.0.0:31337:80"
+    environment: {}
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s

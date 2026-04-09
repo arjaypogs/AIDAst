@@ -1,27 +1,30 @@
 # Frontend Dockerfile - React + Vite with hot reload for development
 FROM node:20-alpine
 
-# Set working directory
 WORKDIR /app
 
-# Copy package files first for better layer caching
 COPY package*.json ./
-
-# Install dependencies
 RUN npm install
 
-# Copy application code
-# Note: In development, this will be overridden by volume mount for hot reload
+# Cache node_modules outside /app so the bind mount can't shadow it.
+# The CMD restores from here in ~10s if the named volume is empty (e.g. after
+# a mode switch from prod), instead of running a full npm install (~2 min).
+RUN cp -r node_modules /opt/node_modules_cache
+
 COPY . .
 
-# Expose Vite dev server port
 EXPOSE 5173
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+HEALTHCHECK --interval=5s --timeout=5s --start-period=15s --retries=10 \
     CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:5173 || exit 1
 
-# Run Vite dev server
-# npm install ensures node_modules is populated when the anonymous volume is empty (fresh install)
-# --host 0.0.0.0 is required for Docker networking to work
-CMD ["sh", "-c", "npm install && npm run dev -- --host 0.0.0.0"]
+# On startup:
+#   1. If node_modules is empty (fresh volume), restore from cache (~10s, no network)
+#   2. Run npm install (no-op if packages unchanged, catches new deps after --build)
+#   3. Start Vite
+CMD ["sh", "-c", "\
+  if [ ! -f /app/node_modules/.bin/vite ]; then \
+    echo '[aida] Restoring node_modules from cache...'; \
+    cp -r /opt/node_modules_cache/. /app/node_modules/; \
+  fi; \
+  npm run dev -- --host 0.0.0.0"]

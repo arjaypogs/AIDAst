@@ -22,6 +22,12 @@ const MainLayout = () => {
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Dev mode indicator — only visible in development builds */}
+            {import.meta.env.MODE === 'development' && (
+              <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-400 border border-orange-200 dark:border-orange-700 select-none">
+                DEV
+              </span>
+            )}
             {/* Quick actions */}
             <button className="text-xs text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 px-2 py-1 rounded hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors">
               ⌘K to search

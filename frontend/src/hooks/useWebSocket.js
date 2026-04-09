@@ -4,7 +4,17 @@
  */
 import { useEffect, useRef, useCallback, useState } from 'react';
 
-const WS_URL = import.meta.env.VITE_API_URL?.replace('http', 'ws') || 'ws://localhost:8000/api';
+// In production (VITE_API_URL=/api), derive the WS host from the browser's
+// current location so the connection works for any IP, not just localhost.
+function resolveWsBaseUrl() {
+  const apiUrl = import.meta.env.VITE_API_URL;
+  if (!apiUrl || apiUrl.startsWith('/')) {
+    const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    return `${proto}//${window.location.host}/api`;
+  }
+  return apiUrl.replace(/^http/, 'ws');
+}
+const WS_URL = resolveWsBaseUrl();
 const RECONNECT_DELAY = 3000; // 3 seconds
 const MAX_RECONNECT_ATTEMPTS = 10;
 
