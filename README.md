@@ -87,22 +87,28 @@ Without execution capabilities, security testing becomes a tedious back-and-fort
 
 - **Docker Desktop** - To run the platform
 - **An AI Client** - Claude Desktop, Claude Code, Gemini CLI, Antigravity... pick your favorite
-- **Pentesting container** - `aida-pentest` built-in (default, ~2 GB) or [Exegol](https://github.com/ThePorgs/Exegol) if you need 400+ tools
 
+### Option A: Docker Hub (no clone needed)
 
 ```bash
-# Clone
-git clone https://github.com/Vasco0x4/AIDA.git
-cd AIDA
-
-# Start everything
-./start.sh
-
-# Open the dashboard
-open http://localhost:5173
+curl -fsSL https://raw.githubusercontent.com/Vasco0x4/AIDA/main/docker-compose.hub.yml -o docker-compose.yml
+docker compose up -d
 ```
 
-On first run, `./start.sh` will ask which pentesting container you want to use — the built-in `aida-pentest` or your own Exegol container. Default is `aida-pentest`. You can change this anytime in Settings.
+Open **http://localhost:31337** — done.
+
+### Option B: From source
+
+```bash
+git clone https://github.com/Vasco0x4/AIDA.git
+cd AIDA
+./start.sh
+```
+
+Open **http://localhost:31337** — production mode by default (Nginx).
+
+> **Contributors:** use `./start.sh --dev` for Vite hot reload on `localhost:5173`.
+> **LAN access:** use `./start.sh --lan` to share with your team.
 
 ### Connect Your AI
 
@@ -232,12 +238,12 @@ AIDA/
 │   └── Dockerfile       # Ubuntu 22.04 + nmap, ffuf, gobuster, sqlmap...
 ├── Docs/                # Documentation and AI methodology
 ├── aida.py              # CLI launcher
-├── start.sh             # Start the platform (dev mode)
-├── start-lan.sh         # Start in LAN/prod mode (Nginx on port 31337)
+├── start.sh             # Start the platform (prod default, --dev, --lan)
 ├── stop.sh              # Stop all services (data preserved)
 ├── restart.sh           # Restart all services
 ├── docker-compose.yml   # Dev infrastructure
-└── docker-compose.prod.yml  # Prod/LAN overrides (Nginx reverse proxy)
+├── docker-compose.prod.yml  # Prod overrides (Nginx reverse proxy)
+└── docker-compose.hub.yml   # Standalone — pre-built Docker Hub images
 ```
 
 ---

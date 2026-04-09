@@ -1,66 +1,57 @@
 # AIDA Installation Guide
 
-Get AIDA running in 5 minutes.
+Get AIDA running in under a minute.
 
 ---
 
 ## Prerequisites
 
-Before we start, make sure you have:
-
 | Requirement | Version | Check |
 |-------------|---------|-------|
 | **Docker Desktop** | Latest | `docker --version` |
-| **Python** | 3.10+ | `python3 --version` |
-| **Git** | Any | `git --version` |
 
-Also needed:
+Also needed for AI integration:
+- **Python** 3.10+ (`python3 --version`) — for the MCP server and CLI
 - **An AI client** that supports MCP — Claude Code or Kimi CLI recommended (see Step 5)
 
-> **Exegol users:** AIDA supports Exegol as an alternative container. You will be asked at first launch.
+> **Exegol users:** AIDA uses `aida-pentest` by default. You can switch to Exegol anytime in Settings.
 
 ---
 
 ## Platform Setup
 
-### Step 1: Clone the Repository
+### Quick Install (Docker Hub)
+
+No clone needed — pre-built images, one command:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Vasco0x4/AIDA/main/docker-compose.hub.yml -o docker-compose.yml
+docker compose up -d
+```
+
+Open **http://localhost:31337** — done.
+
+> To share on your LAN: `FRONTEND_BIND=0.0.0.0 docker compose up -d`
+
+### From Source
 
 ```bash
 git clone https://github.com/Vasco0x4/AIDA.git
 cd AIDA
-```
-
-### Step 2: Start the Platform
-
-The easiest way - Docker Compose handles everything:
-
-```bash
 ./start.sh
 ```
 
-**On first run**, you will be asked to choose your pentesting container:
-
-```
-  [1] aida-pentest
-      Built-in, managed by AIDA — starts automatically with ./start.sh
-      Size: ~2 GB  |  Tools: nmap, ffuf, gobuster, sqlmap, nikto...
-
-  [2] Exegol
-      Third-party container — requires separate install: https://docs.exegol.com
-      Size: ~20-40 GB  |  Tools: ~400+ security tools
-```
-
-Both options are fully supported. Press Enter or `1` for `aida-pentest` (default). If you're already an Exegol user, select `2` to keep using it. You can switch between them anytime in Settings.
+Open **http://localhost:31337** — production mode (Nginx) by default.
 
 This starts:
 - **PostgreSQL** on port `5432` - The database
 - **Backend API** on port `8000` - FastAPI server
-- **Frontend** on port `5173` - React dashboard
-- **aida-pentest** - Pentesting container (if selected above)
+- **Frontend (Nginx)** on port `31337` - Web dashboard
+- **aida-pentest** - Built-in pentesting container (~2 GB)
 
 ### Step 3: First-Run Setup
 
-Open your browser to [http://localhost:5173](http://localhost:5173)
+Open your browser to [http://localhost:31337](http://localhost:31337)
 
 On the very first launch, AIDA shows a **setup wizard** to create the initial admin account. Pick a username and password — these are the credentials you'll use everywhere (web UI, CLI, MCP). Once submitted, you land on the dashboard.
 
@@ -313,7 +304,7 @@ Run through this checklist:
 
 | Check | How | Expected |
 |-------|-----|----------|
-| Platform running | http://localhost:5173 | Dashboard loads |
+| Platform running | http://localhost:31337 | Dashboard loads |
 | API healthy | http://localhost:8000/health | `{"status": "healthy"}` |
 | Database connected | Check backend logs | No connection errors |
 | Pentest container | `docker ps \| grep aida-pentest` or `docker ps \| grep exegol` | Container running |
@@ -322,32 +313,30 @@ Run through this checklist:
 
 ## Platform Scripts
 
-AIDA comes with management scripts for dev and production workflows:
+One script, three modes:
 
-| Script | Description |
-|--------|-------------|
-| `./start.sh` | Start AIDA in dev mode (Vite on `:5173`, hot reload) |
-| `./start-lan.sh` | Start in LAN/prod mode (Nginx on `:31337`, accessible from network) |
+| Command | Description |
+|---------|-------------|
+| `./start.sh` | Production mode — Nginx on `localhost:31337` (default) |
+| `./start.sh --lan` | Production + LAN — accessible from your network |
+| `./start.sh --dev` | Development — Vite hot reload on `localhost:5173` |
 | `./stop.sh` | Stop all services — data is preserved |
 | `./restart.sh` | Restart all services and wait for health checks |
-
-**Dev mode** (`start.sh`): Frontend served by Vite with hot module reload. Best for development.
-
-**LAN/prod mode** (`start-lan.sh`): Frontend built and served via Nginx reverse proxy on port `31337`. Accessible from any device on your local network. The script auto-detects your LAN IP and configures CORS.
 
 Switching between modes is safe — your database and all data are preserved.
 
 ```bash
-# Start dev
+# Production (default)
 ./start.sh
 
-# Switch to LAN mode (stops dev first)
-./start-lan.sh
+# Share on LAN (auto-detects IP, configures CORS)
+./start.sh --lan
 
-# Stop everything
+# Development (contributors — Vite hot reload)
+./start.sh --dev
+
+# Stop / restart
 ./stop.sh
-
-# Restart current mode
 ./restart.sh
 ```
 
