@@ -31,7 +31,7 @@ const CredentialsManager = ({ assessmentId, onUpdate }) => {
     if (!confirm('Are you sure you want to delete this credential?')) return;
 
     try {
-      await apiClient.delete(`/credentials/${credentialId}`);
+      await apiClient.delete(`/assessments/${assessmentId}/credentials/${credentialId}`);
       await loadCredentials();
       if (onUpdate) onUpdate();
     } catch (error) {
@@ -288,7 +288,7 @@ const CredentialModal = ({ assessmentId, credential, onClose, onSuccess }) => {
       if (formData.notes) data.notes = formData.notes;
 
       if (isEditing) {
-        await apiClient.patch(`/credentials/${credential.id}`, data);
+        await apiClient.patch(`/assessments/${assessmentId}/credentials/${credential.id}`, data);
       } else {
         await apiClient.post(`/assessments/${assessmentId}/credentials`, data);
       }
