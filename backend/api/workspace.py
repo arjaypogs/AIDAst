@@ -1,6 +1,8 @@
 """
 Workspace API - Endpoints for opening workspace folders on host filesystem
 """
+import shlex
+
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -195,7 +197,7 @@ async def open_assessment_workspace(
                 subdirs = ['recon', 'exploits', 'loot', 'notes', 'scripts', 'context']
                 subdir_paths = [f"{assessment.workspace_path}/{subdir}" for subdir in subdirs]
                 all_paths = [assessment.workspace_path] + subdir_paths
-                mkdir_command = f"mkdir -p {' '.join(all_paths)}"
+                mkdir_command = f"mkdir -p {' '.join(shlex.quote(p) for p in all_paths)}"
 
                 mkdir_result = await workspace_service._run_command([
                     "docker", "exec", container_name, "bash", "-c", mkdir_command

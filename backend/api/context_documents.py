@@ -5,6 +5,7 @@ import asyncio
 import io
 import os
 import re
+import shlex
 import tempfile
 import zipfile
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
@@ -267,7 +268,7 @@ async def _extract_source_zip(assessment_id: int, filename: str, content: bytes,
             rc, _, stderr = await _docker_exec_ctx(
                 container_name,
                 ["python3", "-c",
-                 f"import zipfile,os; z=zipfile.ZipFile('{container_zip}'); os.makedirs('{container_target}',exist_ok=True); z.extractall('{container_target}'); z.close()"],
+                 f"import zipfile,os; z=zipfile.ZipFile({shlex.quote(container_zip)}); os.makedirs({shlex.quote(container_target)},exist_ok=True); z.extractall({shlex.quote(container_target)}); z.close()"],
                 timeout=120
             )
 
@@ -283,7 +284,7 @@ async def _extract_source_zip(assessment_id: int, filename: str, content: bytes,
         # Write metadata
         await _docker_exec_ctx(
             container_name,
-            ["bash", "-c", f"printf 'type=zip\\n' > {container_target}/.source_meta"],
+            ["bash", "-c", f"printf 'type=zip\\n' > {shlex.quote(container_target + '/.source_meta')}"],
             timeout=5
         )
 
