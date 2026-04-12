@@ -114,44 +114,37 @@ async def create_credential(
     return db_credential
 
 
-@router.get("/assessments/{assessment_id}/credentials/{credential_id}", response_model=CredentialResponse)
-async def get_credential(assessment_id: int, credential_id: int, db: Session = Depends(get_db)):
+@router.get("/credentials/{credential_id}", response_model=CredentialResponse)
+async def get_credential(credential_id: int, db: Session = Depends(get_db)):
     """
-    Get a specific credential by ID, scoped to its assessment
+    Get a specific credential by ID
     """
-    credential = db.query(Credential).filter(
-        Credential.id == credential_id,
-        Credential.assessment_id == assessment_id
-    ).first()
+    credential = db.query(Credential).filter(Credential.id == credential_id).first()
 
     if not credential:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Credential {credential_id} not found in assessment {assessment_id}"
+            detail=f"Credential {credential_id} not found"
         )
 
     return credential
 
 
-@router.patch("/assessments/{assessment_id}/credentials/{credential_id}", response_model=CredentialResponse)
+@router.patch("/credentials/{credential_id}", response_model=CredentialResponse)
 async def update_credential(
-    assessment_id: int,
     credential_id: int,
     credential_update: CredentialUpdate,
     db: Session = Depends(get_db)
 ):
     """
-    Update a credential (partial update), scoped to its assessment
+    Update a credential (partial update)
     """
-    db_credential = db.query(Credential).filter(
-        Credential.id == credential_id,
-        Credential.assessment_id == assessment_id
-    ).first()
+    db_credential = db.query(Credential).filter(Credential.id == credential_id).first()
 
     if not db_credential:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Credential {credential_id} not found in assessment {assessment_id}"
+            detail=f"Credential {credential_id} not found"
         )
 
     # Update only provided fields
@@ -192,20 +185,17 @@ async def update_credential(
     return db_credential
 
 
-@router.delete("/assessments/{assessment_id}/credentials/{credential_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_credential(assessment_id: int, credential_id: int, db: Session = Depends(get_db)):
+@router.delete("/credentials/{credential_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_credential(credential_id: int, db: Session = Depends(get_db)):
     """
-    Delete a credential, scoped to its assessment
+    Delete a credential
     """
-    credential = db.query(Credential).filter(
-        Credential.id == credential_id,
-        Credential.assessment_id == assessment_id
-    ).first()
+    credential = db.query(Credential).filter(Credential.id == credential_id).first()
 
     if not credential:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Credential {credential_id} not found in assessment {assessment_id}"
+            detail=f"Credential {credential_id} not found"
         )
 
     assessment_id = credential.assessment_id
