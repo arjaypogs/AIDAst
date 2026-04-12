@@ -1,13 +1,30 @@
 """
 Assessment Pydantic schemas
 """
+import re
 from datetime import date, datetime
 from typing import Optional
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
+
+# Safe characters: alphanumeric, spaces, underscores, hyphens, dots
+_NAME_PATTERN = re.compile(r'^[a-zA-Z0-9][a-zA-Z0-9 _.\-()]{0,254}$')
 
 
 class AssessmentBase(BaseModel):
     name: str
+
+    @field_validator('name')
+    @classmethod
+    def validate_name(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError('Assessment name cannot be empty')
+        if not _NAME_PATTERN.match(v):
+            raise ValueError(
+                'Assessment name must start with an alphanumeric character and '
+                'contain only letters, digits, spaces, underscores, hyphens, dots, or parentheses (max 255 chars)'
+            )
+        return v
     client_name: Optional[str] = None
     scope: Optional[str] = None
     limitations: Optional[str] = None
@@ -31,6 +48,21 @@ class AssessmentCreate(AssessmentBase):
 class AssessmentUpdate(BaseModel):
     """Schema for updating an assessment (all fields optional)"""
     name: Optional[str] = None
+
+    @field_validator('name')
+    @classmethod
+    def validate_name(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        v = v.strip()
+        if not v:
+            raise ValueError('Assessment name cannot be empty')
+        if not _NAME_PATTERN.match(v):
+            raise ValueError(
+                'Assessment name must start with an alphanumeric character and '
+                'contain only letters, digits, spaces, underscores, hyphens, dots, or parentheses (max 255 chars)'
+            )
+        return v
     client_name: Optional[str] = None
     scope: Optional[str] = None
     limitations: Optional[str] = None
@@ -87,6 +119,21 @@ class AssessmentListResponse(BaseModel):
 
 class DuplicateAssessmentRequest(BaseModel):
     name: Optional[str] = None
+
+    @field_validator('name')
+    @classmethod
+    def validate_name(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        v = v.strip()
+        if not v:
+            raise ValueError('Assessment name cannot be empty')
+        if not _NAME_PATTERN.match(v):
+            raise ValueError(
+                'Assessment name must start with an alphanumeric character and '
+                'contain only letters, digits, spaces, underscores, hyphens, dots, or parentheses (max 255 chars)'
+            )
+        return v
     include_cards: bool = False
     include_sections: bool = False
     include_recon: bool = False
