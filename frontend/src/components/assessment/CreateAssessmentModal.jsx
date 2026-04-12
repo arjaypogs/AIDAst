@@ -110,7 +110,12 @@ const CreateAssessmentModal = ({ onClose, onSuccess }) => {
 
       onSuccess(response.data);
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to create assessment');
+      const detail = err.response?.data?.detail;
+      if (Array.isArray(detail)) {
+        setError(detail.map(e => e.msg).join(', '));
+      } else {
+        setError(detail || 'Failed to create assessment');
+      }
     } finally {
       setLoading(false);
     }
