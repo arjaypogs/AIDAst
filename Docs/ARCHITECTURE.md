@@ -1,12 +1,12 @@
-# AIDA Architecture
+# ASO Architecture
 
-Technical deep dive into how AIDA works under the hood.
+Technical deep dive into how ASO works under the hood.
 
 ---
 
 ## System Overview
 
-AIDA is a multi-layer platform connecting AI assistants to pentesting environments:
+ASO is a multi-layer platform connecting AI assistants to pentesting environments:
 
 ![System Overview](../assets/doc/system-overview.png)
 

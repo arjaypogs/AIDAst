@@ -44,7 +44,7 @@ async def download_pdf_report(
 
     # Sanitize filename
     safe_name = "".join(c if c.isalnum() or c in " -_" else "_" for c in assessment.name)
-    filename = f"AIDA_Report_{safe_name}.pdf"
+    filename = f"ASO_Report_{safe_name}.pdf"
 
     return StreamingResponse(
         pdf_buffer,

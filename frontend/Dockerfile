@@ -24,7 +24,7 @@ HEALTHCHECK --interval=5s --timeout=5s --start-period=15s --retries=10 \
 #   3. Start Vite
 CMD ["sh", "-c", "\
   if [ ! -f /app/node_modules/.bin/vite ]; then \
-    echo '[aida] Restoring node_modules from cache...'; \
+    echo '[aso] Restoring node_modules from cache...'; \
     cp -r /opt/node_modules_cache/. /app/node_modules/; \
   fi; \
   npm run dev -- --host 0.0.0.0"]

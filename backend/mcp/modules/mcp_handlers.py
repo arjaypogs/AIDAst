@@ -115,7 +115,7 @@ async def handle_tool_call(name: str, arguments: dict, mcp_service) -> List[Text
 
     except Exception as e:
         import logging
-        log = logging.getLogger("aida-mcp")
+        log = logging.getLogger("aso-mcp")
         log.error(f"Tool execution error: {e}")
         return [TextContent(type="text", text=f"Error: {str(e)}")]
 
@@ -172,7 +172,7 @@ async def _handle_load_assessment(arguments: dict, mcp_service) -> List[TextCont
         try:
             from utils.tree_generator import generate_workspace_tree, get_context_files_list
             import logging
-            log = logging.getLogger("aida-mcp")
+            log = logging.getLogger("aso-mcp")
             
             # Generate tree structure
             tree_structure = await generate_workspace_tree(
@@ -582,7 +582,7 @@ async def _handle_add_card(arguments: dict, mcp_service) -> List[TextContent]:
         else:
             # Library not available or invalid vector — store vector, keep manual severity if provided
             import logging
-            logging.getLogger("aida-mcp").warning(f"Could not calculate CVSS score for vector: {cvss_vector}")
+            logging.getLogger("aso-mcp").warning(f"Could not calculate CVSS score for vector: {cvss_vector}")
 
     # Validate that findings have either cvss_vector or severity
     if card_type == "finding" and "severity" not in card_data:
@@ -708,7 +708,7 @@ async def _handle_update_card(arguments: dict, mcp_service) -> List[TextContent]
             update_data["severity"] = derived_severity
         else:
             import logging
-            logging.getLogger("aida-mcp").warning(f"Could not calculate CVSS score for vector: {cvss_vector}")
+            logging.getLogger("aso-mcp").warning(f"Could not calculate CVSS score for vector: {cvss_vector}")
 
     if not update_data:
         return [TextContent(type="text", text="No fields to update provided.")]

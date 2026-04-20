@@ -1,7 +1,7 @@
 <p align="center">
-  <img src="./assets/banner1.png" alt="AIDA Banner" width="100%">
+  <img src="./assets/banner1.png" alt="ASO Banner" width="100%">
 </p>
-<h1 align="center">AI-Driven Security Assessment</h1>
+<h1 align="center">Automated Security Operator</h1>
 
 <p align="center">
   <strong>Give your AI the power of 400+ pentesting tools. Let it hack (legally).</strong>
@@ -9,7 +9,7 @@
 
 <p align="center">
   <a href="#quick-start">Quick Start</a> •
-  <a href="#why-aida-exists">Why AIDA</a> •
+  <a href="#why-aso-exists">Why ASO</a> •
   <a href="Docs/INSTALLATION.md">Installation</a> •
   <a href="Docs/USER_GUIDE.md">User Guide</a> •
   <a href="Docs/ARCHITECTURE.md">Architecture</a>
@@ -18,18 +18,18 @@
 <p align="center">
   <img src="https://img.shields.io/badge/License-AGPL_v3-blue" alt="License">
   <img src="https://img.shields.io/badge/MCP-Compatible-green" alt="MCP">
-  <img src="https://img.shields.io/badge/Container-aida--pentest-orange" alt="aida-pentest">
+  <img src="https://img.shields.io/badge/Container-aso--pentest-orange" alt="aso-pentest">
   <img src="https://img.shields.io/badge/Version-1.0.0--alpha-purple" alt="Version">
 </p>
 
 ---
 
-## What is AIDA?
+## What is ASO?
 
-**AIDA** connects AI assistants to a real pentesting environment. Instead of just *talking* about security testing, your AI can actually *do* it.
+**ASO** connects AI assistants to a real pentesting environment. Instead of just *talking* about security testing, your AI can actually *do* it.
 
 Here's the deal:
--  **Your choice of pentesting container** — use the built-in `aida-pentest` (~2 GB, starts automatically, covers all the essential tools) or bring your own [Exegol](https://github.com/ThePorgs/Exegol) container (400+ tools, ~20-40 GB). You pick at first launch — and can switch anytime.
+-  **Your choice of pentesting container** — use the built-in `aso-pentest` (~2 GB, starts automatically, covers all the essential tools) or bring your own [Exegol](https://github.com/ThePorgs/Exegol) container (400+ tools, ~20-40 GB). You pick at first launch — and can switch anytime.
 -  **MCP integration** that works with *any* AI client (Claude, Gemini, GPT, Antigravity...)
 -  **Web dashboard** to track findings, commands, and progress
 -  **Structured workflow** from recon to exploitation
@@ -37,20 +37,20 @@ Here's the deal:
 Think of it as giving your AI a fully-equipped hacking lab and a notebook to document everything.
 
 <p align="center">
-  <img src="./assets/view.png" alt="AIDA Dashboard" width="800">
+  <img src="./assets/view.png" alt="ASO Dashboard" width="800">
 </p>
 
 ---
 
 
 
-## Why AIDA Exists
+## Why ASO Exists
 
 Modern AI assistants know pentesting tools, techniques, and vulnerability classes—**but they can't execute them.**
 
 Without execution capabilities, security testing becomes a tedious back-and-forth: you ask the AI for a command, copy it to your terminal, wait for results, paste the output back, and repeat. Traditional scanners like Burp Suite run fixed patterns and can't adapt to specific tech stacks or chain multi-step exploits.
 
-**AIDA changes this** by connecting AI directly to a professional pentesting environment:
+**ASO changes this** by connecting AI directly to a professional pentesting environment:
 
 - 🔧 **Direct Execution** - Built-in pentesting environment (nmap, sqlmap, ffuf, nuclei...)
 - 🧠 **Persistent Memory** - Full context maintained across sessions in structured database
@@ -66,7 +66,7 @@ Without execution capabilities, security testing becomes a tedious back-and-fort
 
 <p align="">
   <a href="https://www.youtube.com/watch?v=yz6ac-y4g08">
-    <img src="https://img.youtube.com/vi/yz6ac-y4g08/maxresdefault.jpg" alt="AIDA Demo Video" width="70%">
+    <img src="https://img.youtube.com/vi/yz6ac-y4g08/maxresdefault.jpg" alt="ASO Demo Video" width="70%">
   </a>
 </p>
 
@@ -90,8 +90,8 @@ Without execution capabilities, security testing becomes a tedious back-and-fort
 
 ```bash
 # Clone & start
-git clone https://github.com/Vasco0x4/AIDA.git
-cd AIDA
+git clone https://github.com/Vasco0x4/ASO.git
+cd ASO
 ./start.sh
 
 # Open the dashboard
@@ -105,20 +105,20 @@ open http://localhost:31337
 
 Now hook up your AI client.
 
-**Recommended: AIDA CLI (Claude Code or Kimi)**
+**Recommended: ASO CLI (Claude Code or Kimi)**
 
-The easiest way to get started is using the AIDA CLI wrapper, which supports both Claude Code and Kimi CLI:
+The easiest way to get started is using the ASO CLI wrapper, which supports both Claude Code and Kimi CLI:
 
 ```bash
 # Auto-detect available CLI (Claude or Kimi)
-python3 aida.py --assessment "test"
+python3 aso.py --assessment "test"
 
 # Force a specific CLI
-python3 aida.py --assessment "test" --cli claude
-python3 aida.py --assessment "test" --cli kimi
+python3 aso.py --assessment "test" --cli claude
+python3 aso.py --assessment "test" --cli kimi
 
 # Auto-approve all actions
-python3 aida.py --assessment "test" --yes
+python3 aso.py --assessment "test" --yes
 ```
 
 You can also use your own API keys (Claude only).
@@ -136,10 +136,10 @@ Here's Claude Desktop as an example:
 ```json
 {
   "mcpServers": {
-    "aida-mcp": {
+    "aso-mcp": {
       "command": "/bin/bash",
       "args": [
-        "/absolute/path/to/AIDA/start_mcp.sh"
+        "/absolute/path/to/ASO/start_mcp.sh"
       ]
     }
   }
@@ -160,13 +160,13 @@ Here's Claude Desktop as an example:
 
 ## Works With Any AI
 
-AIDA uses the **Model Context Protocol (MCP)** - an open standard. If your AI client supports MCP, it works with AIDA.
+ASO uses the **Model Context Protocol (MCP)** - an open standard. If your AI client supports MCP, it works with ASO.
 
 | AI Client           | Status      | Setup |
 |---------------------|-------------|-------|
-| **Claude Code**     | Recommended | Via `aida.py` (automatic) |
-| **Kimi CLI**        | Recommended | Via `aida.py` (automatic) |
-| **External API**    | Recommended | Via `aida.py --base-url` |
+| **Claude Code**     | Recommended | Via `aso.py` (automatic) |
+| **Kimi CLI**        | Recommended | Via `aso.py` (automatic) |
+| **External API**    | Recommended | Via `aso.py --base-url` |
 | **Claude Desktop**  | Works       | Manual MCP import |
 | **ChatGPT Desktop** | Works       | Manual MCP import |
 | **Gemini CLI**      | Works       | Manual MCP import |
@@ -216,7 +216,7 @@ CREDENTIALS
 ## Project Structure
 
 ```
-AIDA/
+ASO/
 ├── backend/              # FastAPI + MCP Server
 │   ├── api/             # REST endpoints
 │   ├── mcp/             # MCP server + tools
@@ -225,10 +225,10 @@ AIDA/
 ├── frontend/            # React dashboard
 │   ├── src/pages/       # Dashboard, Assessments, Settings...
 │   └── src/components/  # Reusable UI components
-├── pentest/             # Built-in pentesting container (aida-pentest)
+├── pentest/             # Built-in pentesting container (aso-pentest)
 │   └── Dockerfile       # Ubuntu 22.04 + nmap, ffuf, gobuster, sqlmap...
 ├── Docs/                # Documentation and AI methodology
-├── aida.py              # CLI launcher
+├── aso.py              # CLI launcher
 ├── start.sh             # Start the platform (prod default, --dev, --lan)
 ├── stop.sh              # Stop all services (data preserved)
 ├── restart.sh           # Restart all services
@@ -253,7 +253,7 @@ AIDA/
 
 ## Alpha Release - Known Limitations
 
-**AIDA is currently in alpha.** This means:
+**ASO is currently in alpha.** This means:
 
 - **Local / LAN use only** - Do NOT expose the web interface to the public internet without additional security hardening
 - **Bugs and rough edges exist** - Some error messages use browser alerts, WebSocket reconnections may require manual refresh
@@ -267,13 +267,13 @@ Improvements coming in future releases:
 
 **For now: Run locally or on your LAN, don't expose to internet, use at your own risk.**
 
-Report bugs and request features: [GitHub Issues](https://github.com/Vasco0x4/AIDA/issues)
+Report bugs and request features: [GitHub Issues](https://github.com/Vasco0x4/ASO/issues)
 
 ---
 
 ## Contributing
 
-AIDA is actively developed. Want to contribute?
+ASO is actively developed. Want to contribute?
 
 **Planned Features:**
 
@@ -292,7 +292,7 @@ Need help? Contact **vasco0x4** on Discord.
 
 **AGPL v3** - Free and open source.
 
-You can use, modify, and distribute AIDA freely. If you modify and deploy it (including as a network service), you must open source your changes under AGPL v3.
+You can use, modify, and distribute ASO freely. If you modify and deploy it (including as a network service), you must open source your changes under AGPL v3.
 
 **Commercial licensing available** for organizations that need proprietary modifications.
 Contact: **Vasco0x4@proton.me**
@@ -307,7 +307,7 @@ Contact: **Vasco0x4@proton.me**
 
 ---
 <p align="center">
-  <a href="https://github.com/Vasco0x4/AIDA">⭐ Star on GitHub</a> •
-  <a href="https://github.com/Vasco0x4/AIDA/issues">Report Bug</a> •
+  <a href="https://github.com/Vasco0x4/ASO">⭐ Star on GitHub</a> •
+  <a href="https://github.com/Vasco0x4/ASO/issues">Report Bug</a> •
   <a href="mailto:Vasco0x4@proton.me">Contact</a>
 </p>

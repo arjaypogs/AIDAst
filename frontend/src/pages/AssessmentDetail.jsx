@@ -215,7 +215,7 @@ const AssessmentDetail = () => {
       const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `AIDA_Report_${assessment.name.replace(/[^a-zA-Z0-9 _-]/g, '_')}.pdf`);
+      link.setAttribute('download', `ASO_Report_${assessment.name.replace(/[^a-zA-Z0-9 _-]/g, '_')}.pdf`);
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -489,7 +489,7 @@ const AssessmentDetail = () => {
           <div className="relative" ref={startAIRef}>
             <button
               onClick={() => {
-                if (!localStorage.getItem('aida_mcp_notice_seen')) {
+                if (!localStorage.getItem('aso_mcp_notice_seen')) {
                   setShowMcpNotice(true);
                   return;
                 }
@@ -554,10 +554,10 @@ const AssessmentDetail = () => {
                     <div className="mt-3 pt-3 border-t border-neutral-200 dark:border-neutral-700">
                       <p className="text-[10px] text-neutral-500 dark:text-neutral-400 mb-1.5">Or run manually:</p>
                       <div className="relative">
-                        <pre className="text-[11px] font-mono bg-neutral-900 text-green-400 px-3 py-2 rounded-lg overflow-x-auto">python3 aida.py -a "{assessment.name}"</pre>
+                        <pre className="text-[11px] font-mono bg-neutral-900 text-green-400 px-3 py-2 rounded-lg overflow-x-auto">python3 aso.py -a "{assessment.name}"</pre>
                         <button
                           onClick={() => {
-                            navigator.clipboard.writeText(`python3 aida.py -a "${assessment.name}"`);
+                            navigator.clipboard.writeText(`python3 aso.py -a "${assessment.name}"`);
                             setCopiedCmd(true);
                             setTimeout(() => setCopiedCmd(false), 2000);
                           }}
@@ -1070,11 +1070,11 @@ const AssessmentDetail = () => {
 
               <div className="space-y-3 text-sm text-neutral-700 dark:text-neutral-300">
                 <p>
-                  To connect an AI client (Claude Desktop, Cursor, Gemini, etc.) via MCP, you need to run <code className="font-mono text-xs bg-neutral-100 dark:bg-neutral-700 px-1.5 py-0.5 rounded">aida.py</code> once from your terminal first.
+                  To connect an AI client (Claude Desktop, Cursor, Gemini, etc.) via MCP, you need to run <code className="font-mono text-xs bg-neutral-100 dark:bg-neutral-700 px-1.5 py-0.5 rounded">aso.py</code> once from your terminal first.
                 </p>
                 <p>This authenticates against the backend and caches a long-lived API key — every subsequent launch is silent.</p>
                 <div className="bg-neutral-900 rounded-lg px-4 py-3 font-mono text-xs text-green-400">
-                  python3 aida.py
+                  python3 aso.py
                 </div>
                 <p className="text-xs text-neutral-500 dark:text-neutral-400">
                   Using <strong className="text-neutral-600 dark:text-neutral-300">Claude Code or Kimi CLI</strong>? The launcher handles everything automatically — no extra step needed.
@@ -1091,7 +1091,7 @@ const AssessmentDetail = () => {
               </button>
               <button
                 onClick={() => {
-                  localStorage.setItem('aida_mcp_notice_seen', '1');
+                  localStorage.setItem('aso_mcp_notice_seen', '1');
                   setShowMcpNotice(false);
                   setLaunchResult(null);
                   setShowStartAI(true);

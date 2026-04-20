@@ -1,5 +1,5 @@
 """
-MCP Classes - AIDA MCP Service with structured logging
+MCP Classes - ASO MCP Service with structured logging
 """
 import asyncio
 import time
@@ -22,23 +22,23 @@ file_log = logger  # Alias for backward compatibility
 log = logger  # Alias for backward compatibility
 
 
-class AidaMCPService:
-    """AIDA MCP service with backend integration and container management"""
+class AsoMCPService:
+    """ASO MCP service with backend integration and container management"""
 
     @staticmethod
     def _read_session_file() -> Optional[str]:
-        """Read cached token from .aida/api-key or .aida/session.
+        """Read cached token from .aso/api-key or .aso/session.
 
         Checks api-key first (long-lived, 1 year) then falls back to
-        the short-lived session token written by aida.py.
+        the short-lived session token written by aso.py.
 
-        Path resolution: this file is at AIDA/backend/mcp/modules/mcp_classes.py
-        so parents[3] = AIDA root.
+        Path resolution: this file is at ASO/backend/mcp/modules/mcp_classes.py
+        so parents[3] = ASO root.
         """
-        aida_root = Path(__file__).resolve().parents[3]
+        aso_root = Path(__file__).resolve().parents[3]
         for filename in ("api-key", "session"):
             try:
-                path = aida_root / ".aida" / filename
+                path = aso_root / ".aso" / filename
                 if path.exists():
                     token = path.read_text().strip()
                     if token:
@@ -51,14 +51,14 @@ class AidaMCPService:
         # Load backend URL from environment or use default
         import os
         self.backend_url = backend_url or os.getenv("BACKEND_API_URL", "http://localhost:8000/api")
-        self.token: Optional[str] = os.getenv("AIDA_TOKEN") or self._read_session_file()
+        self.token: Optional[str] = os.getenv("ASO_TOKEN") or self._read_session_file()
         self.current_assessment_id: Optional[int] = None
         self.current_assessment_name: Optional[str] = None
         self.http_client: Optional[httpx.AsyncClient] = None
 
         # Docker/Container management
         self.current_container: Optional[str] = None
-        self.claude_container_name: str = os.getenv("DEFAULT_CONTAINER_NAME", "aida-pentest")
+        self.claude_container_name: str = os.getenv("DEFAULT_CONTAINER_NAME", "aso-pentest")
         self.containers_cache: List[Dict[str, Any]] = []
         self.cache_timestamp: float = 0
         self.cache_ttl: int = 30
@@ -562,13 +562,13 @@ class AidaMCPService:
                             image = container_data.get("Image", "")
                             name = container_data.get("Names", "unknown").lstrip('/')
 
-                            # Include Exegol containers and AIDA built-in containers
+                            # Include Exegol containers and ASO built-in containers
                             is_exegol = ("exegol" in image.lower() or
                                          "nwodtuhs/exegol" in image.lower())
-                            is_aida = ("aida" in image.lower() and "pentest" in image.lower())
+                            is_aso = ("aso" in image.lower() and "pentest" in image.lower())
                             is_default = (name == self.claude_container_name)
 
-                            if is_exegol or is_aida or is_default:
+                            if is_exegol or is_aso or is_default:
                                 containers.append({
                                     "name": name,
                                     "image": image,

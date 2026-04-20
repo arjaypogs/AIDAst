@@ -121,7 +121,7 @@ export const ThemeProvider = ({ children }) => {
   // without re-fetching protected endpoints while logged out.
   useEffect(() => {
     const tryLoad = () => {
-      if (localStorage.getItem('aida_token')) {
+      if (localStorage.getItem('aso_token')) {
         loadTheme();
         loadPrimaryColor();
       } else {
@@ -130,11 +130,11 @@ export const ThemeProvider = ({ children }) => {
       }
     };
     tryLoad();
-    window.addEventListener('aida:auth-loaded', tryLoad);
-    window.addEventListener('aida:auth-cleared', tryLoad);
+    window.addEventListener('aso:auth-loaded', tryLoad);
+    window.addEventListener('aso:auth-cleared', tryLoad);
     return () => {
-      window.removeEventListener('aida:auth-loaded', tryLoad);
-      window.removeEventListener('aida:auth-cleared', tryLoad);
+      window.removeEventListener('aso:auth-loaded', tryLoad);
+      window.removeEventListener('aso:auth-cleared', tryLoad);
     };
   }, []);
 

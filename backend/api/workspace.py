@@ -352,7 +352,7 @@ async def resolve_workspace_path(
     """
     Resolve assessment workspace container path to host filesystem path
     
-    Used by AIDA CLI launcher to determine where to launch Claude Code from.
+    Used by ASO CLI launcher to determine where to launch Claude Code from.
     
     Query params:
         assessment_id: Assessment ID (optional)
@@ -365,7 +365,7 @@ async def resolve_workspace_path(
         - assessment_name: Name of the assessment
         - container_name: Container name used
         - container_path: Path inside container (e.g., /workspace/MyAssessment)
-        - host_path: Resolved host filesystem path (e.g., ~/.exegol/workspaces/exegol-aida/MyAssessment)
+        - host_path: Resolved host filesystem path (e.g., ~/.exegol/workspaces/exegol-aso/MyAssessment)
         - exists: Whether the workspace exists (checked in container)
         - container_running: Whether the container is running
     """

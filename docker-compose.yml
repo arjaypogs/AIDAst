@@ -2,13 +2,13 @@ services:
   # PostgreSQL Database
   postgres:
     image: postgres:16-alpine
-    container_name: aida_postgres
+    container_name: aso_postgres
     env_file:
       - backend/.env
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-aida}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-aida}
-      POSTGRES_DB: ${POSTGRES_DB:-aida_assessments}
+      POSTGRES_USER: ${POSTGRES_USER:-aso}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-aso}
+      POSTGRES_DB: ${POSTGRES_DB:-aso_assessments}
     ports:
       # Bind to localhost only — the database must never be reachable from
       # the LAN. The backend talks to postgres over the internal docker
@@ -18,9 +18,9 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - aida-network
+      - aso-network
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-aida} -d ${POSTGRES_DB:-aida_assessments}" ]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-aso} -d ${POSTGRES_DB:-aso_assessments}" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -28,17 +28,17 @@ services:
 
   # FastAPI Backend
   backend:
-    image: vasco0x4/aida-backend:latest
+    image: vasco0x4/aso-backend:latest
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: aida_backend
+    container_name: aso_backend
     env_file:
       - backend/.env
     environment:
       # DB_HOST is set by switch-db.sh in root .env (default: postgres)
       POSTGRES_HOST: ${DB_HOST:-postgres}
-      POSTGRES_DB: ${DB_NAME:-aida_assessments}
+      POSTGRES_DB: ${DB_NAME:-aso_assessments}
       # Set to 'development' by start.sh --dev for hot reload
       ENVIRONMENT: ${ENVIRONMENT:-production}
     ports:
@@ -55,7 +55,7 @@ services:
       # Mount logs directory with SELinux flag
       - ./backend/logs:/app/logs:z
     networks:
-      - aida-network
+      - aso-network
     depends_on:
       postgres:
         condition: service_healthy
@@ -69,11 +69,11 @@ services:
 
   # React Frontend
   frontend:
-    image: vasco0x4/aida-frontend:latest
+    image: vasco0x4/aso-frontend:latest
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: aida_frontend
+    container_name: aso_frontend
     environment:
       # Frontend talks to backend via localhost (browser runs on host)
       VITE_API_URL: http://localhost:8000/api
@@ -86,7 +86,7 @@ services:
       - ./frontend:/app:z
       - /app/node_modules
     networks:
-      - aida-network
+      - aso-network
     depends_on:
       - backend
     restart: unless-stopped
@@ -97,31 +97,31 @@ services:
       retries: 3
       start_period: 40s
 
-  # AIDA Pentest Container
+  # ASO Pentest Container
   # Lightweight execution environment for AI-driven assessments.
   # The backend connects to this container via Docker socket (docker exec).
-  aida-pentest:
-    image: vasco0x4/aida-pentest:latest
+  aso-pentest:
+    image: vasco0x4/aso-pentest:latest
     build:
       context: ./pentest
       dockerfile: Dockerfile
-    container_name: aida-pentest
+    container_name: aso-pentest
     tty: true
     stdin_open: true
     volumes:
       # Workspace bind mount — same /workspace path as Exegol.
       # workspace_service.py discovers this path via docker inspect, so the
-      # host path resolution in aida.py continues to work without changes.
-      - ${HOME}/.aida/workspaces:/workspace
+      # host path resolution in aso.py continues to work without changes.
+      - ${HOME}/.aso/workspaces:/workspace
     networks:
-      - aida-network
+      - aso-network
     restart: unless-stopped
 
 networks:
-  aida-network:
-    name: aida-network
+  aso-network:
+    name: aso-network
     driver: bridge
 
 volumes:
   postgres_data:
-    name: aida_postgres_data
+    name: aso_postgres_data

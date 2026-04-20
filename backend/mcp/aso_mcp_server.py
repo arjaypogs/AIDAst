@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-AIDA MCP Server - Main Entry Point
-AI-Driven Security Assessment - Model Context Protocol Server
+ASO MCP Server - Main Entry Point
+Automated Security Operator - Model Context Protocol Server
 
 Refactored with modular architecture for better maintainability
 
 Changes in version 2.0:
-- Rebranded to AIDA (AI-Driven Security Assessment)
+- Rebranded to ASO (Automated Security Operator)
 - Modular structure (classes, tools, handlers, resources separated)
 - Renamed: start_assessment → load_assessment
 - Removed: list_containers, select_container (auto-managed)
@@ -57,7 +57,7 @@ try:
     # Add modules directory to path
     sys.path.insert(0, str(Path(__file__).parent / "modules"))
 
-    from mcp_classes import AidaMCPService
+    from mcp_classes import AsoMCPService
     from mcp_tools import get_tool_definitions
     from mcp_handlers import handle_tool_call
     from mcp_resources import get_resources, handle_resource_read
@@ -70,8 +70,8 @@ except Exception as e:
     sys.exit(1)
 
 # Initialize MCP server and service
-server = Server("aida-mcp")
-mcp_service = AidaMCPService()
+server = Server("aso-mcp")
+mcp_service = AsoMCPService()
 
 
 @server.list_resources()
@@ -110,8 +110,8 @@ async def main():
 
     logger.info(
         "MCP server starting",
-        server="aida-mcp",
-        project="AIDA - AI-Driven Security Assessment",
+        server="aso-mcp",
+        project="ASO - Automated Security Operator",
         version="1.0.0-alpha",
         log_level=settings.LOG_LEVEL
     )
@@ -125,7 +125,7 @@ async def main():
                 read_stream,
                 write_stream,
                 InitializationOptions(
-                    server_name="aida-mcp",
+                    server_name="aso-mcp",
                     server_version="1.0.0-alpha",
                     capabilities=server.get_capabilities(
                         notification_options=NotificationOptions(),

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-AIDA Host Helper — small local HTTP helper running on the host (not Docker).
+ASO Host Helper — small local HTTP helper running on the host (not Docker).
 
-Provides three actions to the AIDA frontend:
+Provides three actions to the ASO frontend:
   POST /open    {path}              → open a folder in the host file explorer
-  POST /launch  {assessment_name}   → launch aida.py in a new terminal window
+  POST /launch  {assessment_name}   → launch aso.py in a new terminal window
   GET  /status                      → liveness check (no system info)
 
 Security model
@@ -19,12 +19,12 @@ to processes on the same machine. The realistic threats are:
 Defenses applied:
 
   - Strict Origin allowlist — every request must carry an Origin header
-    pointing at the AIDA frontend (http://localhost:5173 or
+    pointing at the ASO frontend (http://localhost:5173 or
     http://127.0.0.1:5173). Browsers always send accurate Origin headers
     on cross-origin XHR/fetch, so a website at https://evil.com cannot
     forge it. The CORS response echoes the validated origin (never *).
-  - Path allowlist on /open — only directories under AIDA_ROOT or
-    ~/.aida/workspaces can be opened, so the helper cannot be used to
+  - Path allowlist on /open — only directories under ASO_ROOT or
+    ~/.aso/workspaces can be opened, so the helper cannot be used to
     enumerate the user's home directory.
   - Strict regex on assessment_name — alphanumerics, spaces, dashes,
     underscores, dots only. Defense in depth on top of shlex quoting.
@@ -47,10 +47,10 @@ from pathlib import Path
 from typing import Optional
 
 PORT = 9876
-AIDA_ROOT = Path(__file__).resolve().parent.parent
+ASO_ROOT = Path(__file__).resolve().parent.parent
 WORKSPACE_ROOTS = [
-    AIDA_ROOT,
-    Path.home() / ".aida" / "workspaces",
+    ASO_ROOT,
+    Path.home() / ".aso" / "workspaces",
 ]
 
 ALLOWED_ORIGINS = {
@@ -150,7 +150,7 @@ class HelperHandler(http.server.BaseHTTPRequestHandler):
         self.send_json(HTTPStatus.OK, {"ok": True})
 
     def _handle_open(self, origin: str):
-        """Open a folder in the host file explorer (path must be under AIDA root)."""
+        """Open a folder in the host file explorer (path must be under ASO root)."""
         body = self._read_body()
         folder_path = body.get("path")
 
@@ -190,7 +190,7 @@ class HelperHandler(http.server.BaseHTTPRequestHandler):
             self.send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": str(e)}, origin=origin)
 
     def _handle_launch(self, origin: str):
-        """Launch aida.py in a new terminal window."""
+        """Launch aso.py in a new terminal window."""
         body = self._read_body()
         assessment_name = body.get("assessment_name", "")
 
@@ -202,22 +202,22 @@ class HelperHandler(http.server.BaseHTTPRequestHandler):
             )
             return
 
-        aida_py = AIDA_ROOT / "aida.py"
-        if not aida_py.exists():
-            self.send_json(HTTPStatus.NOT_FOUND, {"error": "aida.py not found"}, origin=origin)
+        aso_py = ASO_ROOT / "aso.py"
+        if not aso_py.exists():
+            self.send_json(HTTPStatus.NOT_FOUND, {"error": "aso.py not found"}, origin=origin)
             return
 
         # Build the shell command — every arg shlex-quoted, defense in depth
         # on top of the regex above.
-        venv_python = AIDA_ROOT / ".venv" / "bin" / "python"
+        venv_python = ASO_ROOT / ".venv" / "bin" / "python"
         python_bin = str(venv_python) if venv_python.exists() else "python3"
         shell_cmd = " ".join([
             shlex.quote(python_bin),
-            shlex.quote(str(aida_py)),
+            shlex.quote(str(aso_py)),
             "-a",
             shlex.quote(assessment_name),
         ])
-        full_cmd = f"cd {shlex.quote(str(AIDA_ROOT))} && {shell_cmd}"
+        full_cmd = f"cd {shlex.quote(str(ASO_ROOT))} && {shell_cmd}"
 
         os_name = platform.system()
         try:
@@ -274,7 +274,7 @@ class HelperHandler(http.server.BaseHTTPRequestHandler):
 
 
 def main():
-    print(f"🛠  AIDA Host Helper on http://127.0.0.1:{PORT}")
+    print(f"🛠  ASO Host Helper on http://127.0.0.1:{PORT}")
     print(f"   Allowed origins: {', '.join(sorted(ALLOWED_ORIGINS))}")
     with http.server.HTTPServer(("127.0.0.1", PORT), HelperHandler) as server:
         try:

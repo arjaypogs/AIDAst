@@ -81,7 +81,7 @@ class WorkspaceService:
 
         Returns:
             Dict with host_path and container_path, or None if not found
-            Example: {"host_path": "~/.exegol/workspaces/exegol-aida", "container_path": "/workspace"}
+            Example: {"host_path": "~/.exegol/workspaces/exegol-aso", "container_path": "/workspace"}
         """
         logger.info("Getting workspace mount for container", container_name=container_name)
 
@@ -147,8 +147,8 @@ class WorkspaceService:
         Resolve container workspace path to host filesystem path
 
         Example:
-            container_path="/workspace/assessment-1", container_name="exegol-aida"
-            → "~/.exegol/workspaces/exegol-aida/assessment-1"
+            container_path="/workspace/assessment-1", container_name="exegol-aso"
+            → "~/.exegol/workspaces/exegol-aso/assessment-1"
 
         Args:
             container_path: Path inside container (e.g., "/workspace/assessment-1")

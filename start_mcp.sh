@@ -12,9 +12,9 @@ err() {
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 BACKEND_DIR="$SCRIPT_DIR/backend"
 VENV_DIR="$BACKEND_DIR/venv"
-LOG_FILE="/tmp/aida_mcp.log"
+LOG_FILE="/tmp/aso_mcp.log"
 
-log "Starting AIDA"
+log "Starting ASO"
 log "Script path: $SCRIPT_DIR"
 log "Backend path: $BACKEND_DIR"
 
@@ -53,4 +53,4 @@ EOF
 log "Launching MCP server"
 log "Logs will be in $LOG_FILE"
 
-exec "$VENV_DIR/bin/python3" -u mcp/aida_mcp_server.py 2>"$LOG_FILE"
+exec "$VENV_DIR/bin/python3" -u mcp/aso_mcp_server.py 2>"$LOG_FILE"

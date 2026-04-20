@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-AIDA CLI Launcher - Professional Python Implementation
-AI-Driven Security Assessment - Intelligent wrapper for Claude Code, Kimi CLI & Qwen Code
+ASO CLI Launcher - Professional Python Implementation
+Automated Security Operator - Intelligent wrapper for Claude Code, Kimi CLI & Qwen Code
 """
 import os
 import sys
@@ -13,9 +13,9 @@ from typing import Optional, Literal
 
 def ensure_cli_dependencies():
     """Ensure CLI dependencies are installed before importing them"""
-    AIDA_ROOT = Path(__file__).parent.absolute()
-    VENV_DIR = AIDA_ROOT / ".venv"
-    REQUIREMENTS_FILE = AIDA_ROOT / "requirements.txt"
+    ASO_ROOT = Path(__file__).parent.absolute()
+    VENV_DIR = ASO_ROOT / ".venv"
+    REQUIREMENTS_FILE = ASO_ROOT / "requirements.txt"
     
     # Check if we can import required packages
     try:
@@ -85,23 +85,23 @@ from rich import box
 console = Console()
 
 # Configuration
-AIDA_ROOT = Path(__file__).parent.absolute()
-AIDA_CONFIG_DIR = AIDA_ROOT / ".aida"
-PREPROMPT_FILE = AIDA_ROOT / "Docs" / "PrePrompt.txt"
-MCP_SERVER_PATH = AIDA_ROOT / "backend" / "mcp" / "aida_mcp_server.py"
-MCP_CONFIG_FILE = AIDA_CONFIG_DIR / "mcp-config.json"
-SESSION_FILE = AIDA_CONFIG_DIR / "session"
-API_KEY_FILE = AIDA_CONFIG_DIR / "api-key"
+ASO_ROOT = Path(__file__).parent.absolute()
+ASO_CONFIG_DIR = ASO_ROOT / ".aso"
+PREPROMPT_FILE = ASO_ROOT / "Docs" / "PrePrompt.txt"
+MCP_SERVER_PATH = ASO_ROOT / "backend" / "mcp" / "aso_mcp_server.py"
+MCP_CONFIG_FILE = ASO_CONFIG_DIR / "mcp-config.json"
+SESSION_FILE = ASO_CONFIG_DIR / "session"
+API_KEY_FILE = ASO_CONFIG_DIR / "api-key"
 
 # Kimi-specific config files
-KIMI_AGENT_FILE = AIDA_CONFIG_DIR / "kimi-agent.yaml"
-KIMI_SYSTEM_PROMPT_FILE = AIDA_CONFIG_DIR / "kimi-system.md"
+KIMI_AGENT_FILE = ASO_CONFIG_DIR / "kimi-agent.yaml"
+KIMI_SYSTEM_PROMPT_FILE = ASO_CONFIG_DIR / "kimi-system.md"
 
 DEFAULT_MODEL = "claude-sonnet-4-5"
 DEFAULT_PERMISSION = "default"
 DEFAULT_BACKEND = "http://localhost:8000/api"
 
-CONTAINER_PREFS_FILE = AIDA_CONFIG_DIR / "container-preference"
+CONTAINER_PREFS_FILE = ASO_CONFIG_DIR / "container-preference"
 
 # CLI types
 CLIType = Literal["claude", "kimi", "qwen"]
@@ -109,7 +109,7 @@ CLIType = Literal["claude", "kimi", "qwen"]
 
 def ensure_backend_venv(quiet=False) -> Path:
     """Ensure backend venv exists with MCP dependencies installed"""
-    backend_dir = AIDA_ROOT / "backend"
+    backend_dir = ASO_ROOT / "backend"
     venv_dir = backend_dir / "venv"
     requirements_file = backend_dir / "requirements.txt"
     
@@ -201,7 +201,7 @@ def check_exegol_installed() -> bool:
 
 def generate_mcp_config(db_url: str, token: str = "", quiet=False) -> None:
     """Generate MCP configuration file with proper backend venv"""
-    AIDA_CONFIG_DIR.mkdir(exist_ok=True)
+    ASO_CONFIG_DIR.mkdir(exist_ok=True)
     
     # Ensure backend venv exists with MCP dependencies
     try:
@@ -215,13 +215,13 @@ def generate_mcp_config(db_url: str, token: str = "", quiet=False) -> None:
     
     config = {
         "mcpServers": {
-            "aida-mcp": {
+            "aso-mcp": {
                 "command": python_bin_str,
                 "args": [str(MCP_SERVER_PATH.absolute())],
                 "env": {
-                    "PYTHONPATH": str((AIDA_ROOT / "backend").absolute()),
+                    "PYTHONPATH": str((ASO_ROOT / "backend").absolute()),
                     "DATABASE_URL": db_url,
-                    "AIDA_TOKEN": token,
+                    "ASO_TOKEN": token,
                 }
             }
         }
@@ -239,7 +239,7 @@ def generate_kimi_agent_file(preprompt_content: str, assessment_name: Optional[s
                              assessment_id: Optional[str], container_name: Optional[str],
                              quiet=False) -> Path:
     """Generate Kimi agent YAML file and system prompt markdown"""
-    AIDA_CONFIG_DIR.mkdir(exist_ok=True)
+    ASO_CONFIG_DIR.mkdir(exist_ok=True)
     
     # Enhance preprompt with assessment context for Kimi
     enhanced_prompt = preprompt_content
@@ -259,12 +259,12 @@ The assessment workspace is ready. Use your standard tools to work with files an
     # Write agent YAML file
     agent_yaml = f"""version: 1
 agent:
-  name: aida-security
+  name: aso-security
   extend: default
   system_prompt_path: {KIMI_SYSTEM_PROMPT_FILE.absolute()}
-  # AIDA-specific configuration
+  # ASO-specific configuration
   system_prompt_args:
-    AIDA_VERSION: "1.0"
+    ASO_VERSION: "1.0"
     ASSESSMENT_NAME: "{assessment_name or 'None'}"
 """
     
@@ -308,7 +308,7 @@ def _read_file_token(path: Path) -> Optional[str]:
 
 def _write_file_token(path: Path, token: str) -> None:
     """Write token to path with owner-only permissions."""
-    AIDA_CONFIG_DIR.mkdir(exist_ok=True)
+    ASO_CONFIG_DIR.mkdir(exist_ok=True)
     path.write_text(token)
     path.chmod(0o600)
 
@@ -329,7 +329,7 @@ def _validate_token(backend_url: str, token: str) -> bool:
 def _do_login(backend_url: str) -> str:
     """Prompt for credentials, call /auth/login, return short-lived token."""
     import getpass
-    console.print("[bold]AIDA Backend Login[/bold]")
+    console.print("[bold]ASO Backend Login[/bold]")
     username = console.input("  Username: ")
     password = getpass.getpass("  Password: ")
 
@@ -372,13 +372,13 @@ def authenticate(backend_url: str) -> str:
     """Return a valid token for backend API calls.
 
     Priority:
-      1. AIDA_TOKEN env var (CI / scripting)
-      2. .aida/api-key  — long-lived (1 year), never prompts once set
-      3. .aida/session  — 24h token from a previous login
-      4. Interactive login → issues api-key stored in .aida/api-key
+      1. ASO_TOKEN env var (CI / scripting)
+      2. .aso/api-key  — long-lived (1 year), never prompts once set
+      3. .aso/session  — 24h token from a previous login
+      4. Interactive login → issues api-key stored in .aso/api-key
     """
     # 1. Env var override (CI / scripting)
-    token = os.getenv("AIDA_TOKEN")
+    token = os.getenv("ASO_TOKEN")
     if token:
         return token
 
@@ -442,7 +442,7 @@ def resolve_workspace(assessment_name: str, backend_url: str, token: str = "") -
 
         except httpx.ConnectError:
             # Backend is not reachable at all — don't retry, fail fast
-            console.print("\n[red]✗ Failed to connect to AIDA backend[/red]\n")
+            console.print("\n[red]✗ Failed to connect to ASO backend[/red]\n")
             console.print("[yellow]Troubleshooting:[/yellow]")
             console.print("  1. Check: [cyan]docker-compose ps[/cyan]")
             console.print("  2. Start: [cyan]docker-compose up -d[/cyan]")
@@ -469,11 +469,11 @@ def show_assessment_not_found(assessment_name: str, backend_url: str):
     """Display detailed error when assessment workspace cannot be resolved"""
     console.print(f"\n[red]✗ Cannot load assessment '{assessment_name}'[/red]\n")
 
-    container_pref = CONTAINER_PREFS_FILE.read_text().strip() if CONTAINER_PREFS_FILE.exists() else "aida-pentest"
+    container_pref = CONTAINER_PREFS_FILE.read_text().strip() if CONTAINER_PREFS_FILE.exists() else "aso-pentest"
 
     if container_pref == "exegol" and not check_exegol_installed():
         console.print("[yellow]⚠ No Exegol container detected on this system[/yellow]\n")
-        console.print("[bold]Start an Exegol container before using AIDA:[/bold]")
+        console.print("[bold]Start an Exegol container before using ASO:[/bold]")
         console.print("  [cyan]exegol start <name>[/cyan]\n")
 
     sys.exit(1)
@@ -511,7 +511,7 @@ def show_cli_not_found():
 @click.option("-y", "--yes", is_flag=True, help="Auto-approve all actions (Kimi/Qwen: --yolo, Claude: permission-mode=accept)")
 @click.argument("prompt", nargs=-1)
 def main(assessment, model, permission_mode, preprompt, base_url, api_key, no_mcp, debug, quiet, cli_choice, yes, prompt):
-    """AIDA CLI Launcher - AI-Driven Security Assessment
+    """ASO CLI Launcher - Automated Security Operator
 
     Supports Claude Code, Kimi CLI, and Qwen Code CLI as underlying AI agents.
     """
@@ -536,7 +536,7 @@ def main(assessment, model, permission_mode, preprompt, base_url, api_key, no_mc
         cli_type = cli_choice
     
     # Configuration with env var fallbacks
-    explicit_model = model or os.getenv("AIDA_MODEL")
+    explicit_model = model or os.getenv("ASO_MODEL")
     base_url = base_url or os.getenv("ANTHROPIC_BASE_URL")
     api_key = api_key or os.getenv("ANTHROPIC_AUTH_TOKEN")
     
@@ -544,19 +544,19 @@ def main(assessment, model, permission_mode, preprompt, base_url, api_key, no_mc
     if cli_type == "claude" and (base_url or api_key) and not explicit_model:
         explicit_model = DEFAULT_MODEL
     
-    permission_mode = permission_mode or os.getenv("AIDA_PERMISSION_MODE", DEFAULT_PERMISSION)
+    permission_mode = permission_mode or os.getenv("ASO_PERMISSION_MODE", DEFAULT_PERMISSION)
     backend_url = os.getenv("BACKEND_API_URL", DEFAULT_BACKEND)
-    db_url = os.getenv("DATABASE_URL", "postgresql://aida:aida@localhost:5432/aida_assessments")
+    db_url = os.getenv("DATABASE_URL", "postgresql://aso:aso@localhost:5432/aso_assessments")
 
     # Authenticate once — all subsequent API calls use this token.
-    # The token is also forwarded to the MCP server via AIDA_TOKEN env var.
+    # The token is also forwarded to the MCP server via ASO_TOKEN env var.
     token = authenticate(backend_url)
     auth_headers = {"Authorization": f"Bearer {token}"}
 
     # Interactive assessment selection if none provided
     if not assessment:
         console.print()
-        console.print("[bold cyan]AIDA Security Assessment Assistant[/bold cyan]")
+        console.print("[bold cyan]ASO Security Assessment Assistant[/bold cyan]")
         console.print(f"[dim]Using CLI: {cli_type.title()}[/dim]\n")
         
         # Fetch available assessments
@@ -614,7 +614,7 @@ def main(assessment, model, permission_mode, preprompt, base_url, api_key, no_mc
                     sys.exit(0)
                     
         except httpx.ConnectError:
-            console.print("[red]✗ Failed to connect to AIDA backend[/red]")
+            console.print("[red]✗ Failed to connect to ASO backend[/red]")
             console.print("\nStart the backend:")
             console.print("  → [cyan]docker-compose up -d[/cyan]\n")
             sys.exit(1)
@@ -672,7 +672,7 @@ def main(assessment, model, permission_mode, preprompt, base_url, api_key, no_mc
         generate_mcp_config(db_url, token, quiet)
     
     # Workspace resolution
-    workspace_path = str(AIDA_ROOT)
+    workspace_path = str(ASO_ROOT)
     assessment_id = None
     container_name = None
     
@@ -723,9 +723,9 @@ The assessment workspace is ready. Use your standard tools to work with files an
         if debug:
             cli_args.append("--debug")
 
-        # Add AIDA project to accessible dirs if in workspace
-        if workspace_path != str(AIDA_ROOT):
-            cli_args.extend(["--add-dir", str(AIDA_ROOT)])
+        # Add ASO project to accessible dirs if in workspace
+        if workspace_path != str(ASO_ROOT):
+            cli_args.extend(["--add-dir", str(ASO_ROOT)])
 
         # Add prompt args
         if prompt:
@@ -830,11 +830,11 @@ The assessment workspace is ready. Use your standard tools to work with files an
                     python_bin_str = "python3"
                 
                 settings["mcpServers"] = {
-                    "aida-mcp": {
+                    "aso-mcp": {
                         "command": python_bin_str,
                         "args": [str(MCP_SERVER_PATH.absolute())],
                         "env": {
-                            "PYTHONPATH": str((AIDA_ROOT / "backend").absolute()),
+                            "PYTHONPATH": str((ASO_ROOT / "backend").absolute()),
                             "DATABASE_URL": db_url
                         }
                     }
@@ -911,7 +911,7 @@ The assessment workspace is ready. Use your standard tools to work with files an
 
         # Build panel content
         if explicit_model:
-            panel_content = f"""[bold cyan]AIDA Security Assessment Assistant[/bold cyan]
+            panel_content = f"""[bold cyan]ASO Security Assessment Assistant[/bold cyan]
 
 [dim]CLI:[/dim]            {cli_name}
 [dim]Model:[/dim]        {explicit_model}
@@ -919,7 +919,7 @@ The assessment workspace is ready. Use your standard tools to work with files an
 [dim]MCP Server:[/dim]   {"[green]Enabled[/green]" if not no_mcp else "[yellow]Disabled[/yellow]"}
 [dim]Directory:[/dim]    {workspace_path}"""
         else:
-            panel_content = f"""[bold cyan]AIDA Security Assessment Assistant[/bold cyan]
+            panel_content = f"""[bold cyan]ASO Security Assessment Assistant[/bold cyan]
 
 [dim]CLI:[/dim]            {cli_name}
 [dim]Permission:[/dim]   {permission_text}
@@ -940,7 +940,7 @@ The assessment workspace is ready. Use your standard tools to work with files an
     if not quiet:
         console.print(f"[dim]Starting {cli_name}...[/dim]\n")
     else:
-        console.print(f"[cyan]AIDA[/cyan] → {assessment or 'AIDA Project'} ({cli_name})\n")
+        console.print(f"[cyan]ASO[/cyan] → {assessment or 'ASO Project'} ({cli_name})\n")
 
     try:
         if cli_type == "claude":

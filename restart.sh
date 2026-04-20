@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# AIDA - Restart Services
+# ASO - Restart Services
 # ==============================================================================
 # Restarts all containers and waits for them to be healthy.
 # ==============================================================================
@@ -31,7 +31,7 @@ else
     COMPOSE_CMD="docker compose"
 fi
 
-section "AIDA - Restarting Services"
+section "ASO - Restarting Services"
 
 # Check if containers exist at all
 RUNNING=$($COMPOSE_CMD ps --status running -q 2>/dev/null | wc -l | tr -d ' ')
@@ -39,9 +39,9 @@ STOPPED=$($COMPOSE_CMD ps --status exited -q 2>/dev/null | wc -l | tr -d ' ')
 TOTAL=$((RUNNING + STOPPED))
 
 if [[ "$TOTAL" -eq 0 ]]; then
-    warn "No AIDA containers found"
+    warn "No ASO containers found"
     echo ""
-    echo "Use ./start.sh to start AIDA for the first time"
+    echo "Use ./start.sh to start ASO for the first time"
     exit 1
 fi
 
@@ -78,7 +78,7 @@ wait_for_service() {
     echo -e "${GREEN}Ready${NC}"
 }
 
-wait_for_service "PostgreSQL" "$COMPOSE_CMD exec -T postgres pg_isready -U aida" 30
+wait_for_service "PostgreSQL" "$COMPOSE_CMD exec -T postgres pg_isready -U aso" 30
 wait_for_service "Backend"    "curl -sf http://localhost:8000/health"              60
 
 # Frontend check: port 31337 (prod/Nginx) or 5173 (dev/Vite)
@@ -92,7 +92,7 @@ else
 fi
 
 # Success
-section "AIDA Restarted"
+section "ASO Restarted"
 
 echo ""
 $COMPOSE_CMD ps --format "table {{.Name}}\t{{.Status}}"

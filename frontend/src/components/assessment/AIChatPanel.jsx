@@ -156,7 +156,7 @@ export default function AIChatPanel({ assessmentId, assessmentName }) {
         <div className="flex items-center gap-2">
           <Bot className="w-5 h-5" />
           <div>
-            <h3 className="text-sm font-semibold">AIDA AI</h3>
+            <h3 className="text-sm font-semibold">ASO AI</h3>
             <p className="text-[10px] opacity-75">{assessmentName}</p>
           </div>
         </div>

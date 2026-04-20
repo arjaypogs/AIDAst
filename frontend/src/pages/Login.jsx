@@ -30,13 +30,13 @@ export default function Login() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <img
-            src="/assets/aida-logo.png"
-            alt="AIDA Logo"
+            src="/assets/aso-logo.png"
+            alt="ASO Logo"
             className="w-16 h-16 mx-auto mb-4 object-contain"
           />
-          <h1 className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">AIDA</h1>
+          <h1 className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">ASO</h1>
           <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
-            AI-Driven Security Assessment
+            Automated Security Operator
           </p>
         </div>
 
@@ -108,7 +108,7 @@ export default function Login() {
 
           <div className="mt-4 text-center">
             <a
-              href="https://github.com/Vasco0x4/AIDA/blob/main/Docs/RESET_PASSWORD.md"
+              href="https://github.com/Vasco0x4/ASO/blob/main/Docs/RESET_PASSWORD.md"
               target="_blank"
               rel="noopener noreferrer"
               className="text-xs text-neutral-500 hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400 transition-colors"
