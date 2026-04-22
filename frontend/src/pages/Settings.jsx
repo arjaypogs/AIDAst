@@ -552,7 +552,7 @@ const Settings = () => {
   const [emailFrom, setEmailFrom] = useState('');
   const [emailTo, setEmailTo] = useState('');
   const [emailEncryption, setEmailEncryption] = useState('starttls'); // none, starttls, ssl
-  const [emailSubject, setEmailSubject] = useState('AIDA Security Alert');
+  const [emailSubject, setEmailSubject] = useState('ASO Security Alert');
   const [emailOnCritical, setEmailOnCritical] = useState(true);
   const [emailOnHigh, setEmailOnHigh] = useState(true);
   const [emailOnScan, setEmailOnScan] = useState(false);
@@ -589,7 +589,7 @@ const Settings = () => {
           setEmailFrom(cfg.config?.from_email || '');
           setEmailTo((cfg.config?.to_emails || []).join(', '));
           setEmailEncryption(cfg.config?.encryption || 'starttls');
-          setEmailSubject(cfg.config?.subject || 'AIDA Security Alert');
+          setEmailSubject(cfg.config?.subject || 'ASO Security Alert');
           setEmailOnCritical(cfg.on_critical_finding);
           setEmailOnHigh(cfg.on_high_finding);
           setEmailOnScan(cfg.on_scan_complete);
@@ -1515,7 +1515,7 @@ const Settings = () => {
                 </div>
                 <div>
                   <label className="text-[10px] font-semibold text-neutral-500 uppercase">From Email</label>
-                  <input type="email" value={emailFrom} onChange={e => setEmailFrom(e.target.value)} placeholder="aida@example.com" className="mt-1 w-full text-xs px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100" />
+                  <input type="email" value={emailFrom} onChange={e => setEmailFrom(e.target.value)} placeholder="aso@example.com" className="mt-1 w-full text-xs px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100" />
                 </div>
                 <div>
                   <label className="text-[10px] font-semibold text-neutral-500 uppercase">To Emails (comma-separated)</label>
@@ -1531,7 +1531,7 @@ const Settings = () => {
                 </div>
                 <div>
                   <label className="text-[10px] font-semibold text-neutral-500 uppercase">Subject</label>
-                  <input type="text" value={emailSubject} onChange={e => setEmailSubject(e.target.value)} placeholder="AIDA Security Alert" className="mt-1 w-full text-xs px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100" />
+                  <input type="text" value={emailSubject} onChange={e => setEmailSubject(e.target.value)} placeholder="ASO Security Alert" className="mt-1 w-full text-xs px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100" />
                 </div>
               </div>
               <div className="flex items-center gap-4 text-xs">
@@ -1656,7 +1656,7 @@ const Settings = () => {
 
               <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg divide-y divide-neutral-200 dark:divide-neutral-700">
                 <a
-                  href="https://github.com/Vasco0x4/Aida"
+                  href="https://github.com/Vasco0x4/Aso"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="p-3 flex items-center justify-between hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-colors"

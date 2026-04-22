@@ -72,7 +72,7 @@ CHAT_TOOLS = [
     },
 ]
 
-SYSTEM_PROMPT = """You are AIDA, an AI-driven security assessment assistant. You are conducting a penetration test.
+SYSTEM_PROMPT = """You are ASO, an AI-driven security assessment assistant. You are conducting a penetration test.
 
 Assessment: {assessment_name}
 Scope: {scope}

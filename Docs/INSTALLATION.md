@@ -1,6 +1,6 @@
-# AIDA Installation Guide
+# ASO Installation Guide
 
-Get AIDA running in under a minute.
+Get ASO running in under a minute.
 
 ---
 
@@ -14,7 +14,7 @@ Also needed for AI integration:
 - **Python** 3.10+ (`python3 --version`) — for the MCP server and CLI
 - **An AI client** that supports MCP — Claude Code or Kimi CLI recommended (see Step 5)
 
-> **Exegol users:** AIDA uses `aida-pentest` by default. You can switch to Exegol anytime in Settings.
+> **Exegol users:** ASO uses `aso-pentest` by default. You can switch to Exegol anytime in Settings.
 
 ---
 
@@ -23,8 +23,8 @@ Also needed for AI integration:
 ### Step 1: Clone & Start
 
 ```bash
-git clone https://github.com/Vasco0x4/AIDA.git
-cd AIDA
+git clone https://github.com/Vasco0x4/ASO.git
+cd ASO
 ./start.sh
 ```
 
@@ -36,13 +36,13 @@ This starts:
 - **PostgreSQL** on port `5432` - The database
 - **Backend API** on port `8000` - FastAPI server
 - **Frontend (Nginx)** on port `31337` - Web dashboard
-- **aida-pentest** - Built-in pentesting container (~2 GB)
+- **aso-pentest** - Built-in pentesting container (~2 GB)
 
 ### Step 3: First-Run Setup
 
 Open your browser to [http://localhost:31337](http://localhost:31337)
 
-On the very first launch, AIDA shows a **setup wizard** to create the initial admin account. Pick a username and password — these are the credentials you'll use everywhere (web UI, CLI, MCP). Once submitted, you land on the dashboard.
+On the very first launch, ASO shows a **setup wizard** to create the initial admin account. Pick a username and password — these are the credentials you'll use everywhere (web UI, CLI, MCP). Once submitted, you land on the dashboard.
 
 > **Lost your password?** See [`Docs/RESET_PASSWORD.md`](RESET_PASSWORD.md).
 
@@ -50,11 +50,11 @@ On the very first launch, AIDA shows a **setup wizard** to create the initial ad
 
 ## Step 4: Pentesting Container
 
-AIDA supports two pentesting containers. You chose one during Step 2 — here's what to do next for each.
+ASO supports two pentesting containers. You chose one during Step 2 — here's what to do next for each.
 
-### Option 1 — aida-pentest (built-in)
+### Option 1 — aso-pentest (built-in)
 
-If you selected `aida-pentest`, you're done. The container started automatically as part of `docker compose up` — no extra steps needed.
+If you selected `aso-pentest`, you're done. The container started automatically as part of `docker compose up` — no extra steps needed.
 
 **Disk space:** ~2 GB.
 
@@ -63,7 +63,7 @@ If you selected `aida-pentest`, you're done. The container started automatically
 This covers all the essential tools for a typical assessment. If you need additional tools, you can install them directly inside the container at any time:
 
 ```bash
-docker exec -it aida-pentest bash
+docker exec -it aso-pentest bash
 # then install whatever you need, e.g.:
 apt-get install -y metasploit-framework
 ```
@@ -74,42 +74,42 @@ Or switch to Exegol (Option 2) if you want 400+ tools pre-installed out of the b
 
 If you selected Exegol (or want to switch to it), refer to the official documentation for installation and setup: https://docs.exegol.com
 
-Then in AIDA Settings, make sure your default container is set to match your Exegol container name.
+Then in ASO Settings, make sure your default container is set to match your Exegol container name.
 > **Switching containers:** You can change your container preference anytime in **Settings → Container**. This affects new assessments; existing ones keep their assigned container.
 
 ---
 
 ## Step 5: Connect Your AI Client
 
-Now you need to hook up AIDA to your AI assistant via MCP.
+Now you need to hook up ASO to your AI assistant via MCP.
 
 ### Which AI Client Should I Use?
 
 | AI Client | Recommendation | Setup Method |
 |-----------|----------------|--------------|
-| **Claude Code** | Recommended | Use `aida.py` CLI (automatic) |
-| **Kimi CLI** | Recommended | Use `aida.py` CLI (automatic) |
-| **Qwen Code CLI** | Recommended | Use `aida.py --cli qwen` (automatic) |
-| **Vertex AI / External API** | Recommended | Use `aida.py` with flags |
-| **Antigravity** | Works | Manual MCP import (run `aida.py` once first) |
-| **Gemini CLI** | Works | Manual MCP import (run `aida.py` once first) |
-| **Claude Desktop** | Works | Manual MCP import (run `aida.py` once first) |
+| **Claude Code** | Recommended | Use `aso.py` CLI (automatic) |
+| **Kimi CLI** | Recommended | Use `aso.py` CLI (automatic) |
+| **Qwen Code CLI** | Recommended | Use `aso.py --cli qwen` (automatic) |
+| **Vertex AI / External API** | Recommended | Use `aso.py` with flags |
+| **Antigravity** | Works | Manual MCP import (run `aso.py` once first) |
+| **Gemini CLI** | Works | Manual MCP import (run `aso.py` once first) |
+| **Claude Desktop** | Works | Manual MCP import (run `aso.py` once first) |
 
-> **External MCP clients (Claude Desktop, Cursor, Gemini CLI, etc.)** require running `aida.py` once before connecting. This authenticates against the backend and stores a long-lived API key in `.aida/api-key`. Every subsequent connection reuses it silently — no further login needed.
+> **External MCP clients (Claude Desktop, Cursor, Gemini CLI, etc.)** require running `aso.py` once before connecting. This authenticates against the backend and stores a long-lived API key in `.aso/api-key`. Every subsequent connection reuses it silently — no further login needed.
 
 ---
 
-## AIDA CLI — Claude Code & Kimi
+## ASO CLI — Claude Code & Kimi
 
-The `aida.py` CLI is the recommended way to launch AIDA. It **auto-detects** which AI client you have installed (Claude Code, Kimi CLI, or Qwen Code) and configures everything automatically — MCP server, workspace, preprompt, and authentication.
+The `aso.py` CLI is the recommended way to launch ASO. It **auto-detects** which AI client you have installed (Claude Code, Kimi CLI, or Qwen Code) and configures everything automatically — MCP server, workspace, preprompt, and authentication.
 
 ### Authentication (First Launch)
 
-The first time you run `aida.py`, it prompts for your AIDA credentials (the ones you created in the setup wizard) and stores a **long-lived API key** in `.aida/api-key` (`chmod 600`, valid 1 year). Every subsequent launch reuses this key silently — no more prompts.
+The first time you run `aso.py`, it prompts for your ASO credentials (the ones you created in the setup wizard) and stores a **long-lived API key** in `.aso/api-key` (`chmod 600`, valid 1 year). Every subsequent launch reuses this key silently — no more prompts.
 
-The same key is used by the MCP server to authenticate against the backend, so it works for both the launcher and AI tool calls. To force a re-login, delete `.aida/api-key`.
+The same key is used by the MCP server to authenticate against the backend, so it works for both the launcher and AI tool calls. To force a re-login, delete `.aso/api-key`.
 
-For non-interactive use (CI, scripts), set `AIDA_TOKEN` in the environment to bypass the prompt entirely.
+For non-interactive use (CI, scripts), set `ASO_TOKEN` in the environment to bypass the prompt entirely.
 
 ### Common Options
 
@@ -129,7 +129,7 @@ For non-interactive use (CI, scripts), set `AIDA_TOKEN` in the environment to by
 
 ## Claude Code
 
-**Claude Code is recommended** because the AIDA CLI does everything for you.
+**Claude Code is recommended** because the ASO CLI does everything for you.
 
 ### Prerequisites
 
@@ -140,23 +140,23 @@ You MUST have Claude Code installed and logged in:
 curl -fsSL https://claude.ai/install.sh | bash
 ```
 
-### Launch AIDA
+### Launch ASO
 
 ```bash
 # Interactive — select assessment from list
-python3 aida.py
+python3 aso.py
 
 # Direct launch with assessment name
-python3 aida.py --assessment "MyTarget"
+python3 aso.py --assessment "MyTarget"
 
 # With custom model
-python3 aida.py --assessment "MyTarget" --model claude-opus-4-6
+python3 aso.py --assessment "MyTarget" --model claude-opus-4-6
 
 # Force Claude if both CLIs are installed
-python3 aida.py --assessment "MyTarget" --cli claude
+python3 aso.py --assessment "MyTarget" --cli claude
 
 # Auto-approve all actions (no confirmation prompts)
-python3 aida.py --assessment "MyTarget" --yes
+python3 aso.py --assessment "MyTarget" --yes
 ```
 
 The CLI automatically:
@@ -175,7 +175,7 @@ You can verify if the MCP server is correctly loaded using `/mcp`
 
 ## Kimi CLI
 
-**Kimi CLI** is fully supported as an alternative to Claude Code. The AIDA CLI handles the full setup automatically.
+**Kimi CLI** is fully supported as an alternative to Claude Code. The ASO CLI handles the full setup automatically.
 
 ### Prerequisites
 
@@ -189,25 +189,25 @@ uv tool install kimi-cli
 
 Then log in and configure Kimi CLI according to its documentation.
 
-### Launch AIDA with Kimi
+### Launch ASO with Kimi
 
 ```bash
 # Auto-detect (picks Kimi if Claude isn't installed)
-python3 aida.py --assessment "MyTarget"
+python3 aso.py --assessment "MyTarget"
 
 # Force Kimi explicitly
-python3 aida.py --assessment "MyTarget" --cli kimi
+python3 aso.py --assessment "MyTarget" --cli kimi
 
 # With a specific model
-python3 aida.py --assessment "MyTarget" --cli kimi --model kimi-k2
+python3 aso.py --assessment "MyTarget" --cli kimi --model kimi-k2
 
 # Yolo mode — auto-approve everything
-python3 aida.py --assessment "MyTarget" --cli kimi --yes
+python3 aso.py --assessment "MyTarget" --cli kimi --yes
 ```
 
 The CLI automatically:
-- Generates a Kimi agent YAML file (`.aida/kimi-agent.yaml`)
-- Injects the AIDA system prompt with assessment context
+- Generates a Kimi agent YAML file (`.aso/kimi-agent.yaml`)
+- Injects the ASO system prompt with assessment context
 - Configures the MCP server for Kimi
 - Sets the working directory to the assessment workspace
 
@@ -220,7 +220,7 @@ The CLI automatically:
 If you're using Vertex AI or another external API (Claude only):
 
 ```bash
-python3 aida.py --assessment "MyTarget" \
+python3 aso.py --assessment "MyTarget" \
   --base-url "https://YOUR-VERTEX-ENDPOINT" \
   --api-key "YOUR-API-KEY" \
   --model claude-sonnet-4-5-20250929
@@ -234,18 +234,18 @@ Same benefits as Claude Code, but routing through your own API endpoint.
 
 For Antigravity, Gemini CLI, Claude Desktop, or ChatGPT, you need to manually configure the MCP server.
 
-> ⚠️ **Authentication first** — The MCP server reads its API key from `.aida/api-key`, which is created the first time you run `aida.py`. **Run `python3 aida.py` once before starting your external client**, log in when prompted, and you can `Ctrl+C` immediately after — the key is now cached and any external MCP client will use it.
+> ⚠️ **Authentication first** — The MCP server reads its API key from `.aso/api-key`, which is created the first time you run `aso.py`. **Run `python3 aso.py` once before starting your external client**, log in when prompted, and you can `Ctrl+C` immediately after — the key is now cached and any external MCP client will use it.
 
 **The process:**
 
-1. Run `python3 aida.py` once to log in and generate `.aida/api-key`
+1. Run `python3 aso.py` once to log in and generate `.aso/api-key`
 2. Import the MCP server config (see examples below)
 3. Copy the preprompt from `Docs/PrePrompt.txt`
 4. Paste it into your AI client when starting an assessment
 
 > Antigravity works great if you select Claude. Gemini is OK. Any MCP-compatible client should work.
 >
-> **Prefer Claude Code, Kimi, or Qwen?** Use `aida.py` instead — it handles all of this automatically.
+> **Prefer Claude Code, Kimi, or Qwen?** Use `aso.py` instead — it handles all of this automatically.
 
 ### Config Paths
 
@@ -263,22 +263,22 @@ For Antigravity, Gemini CLI, Claude Desktop, or ChatGPT, you need to manually co
 
 ### MCP Configuration
 
-Add this to your config file (replace `/absolute/path/to/AIDA/` with your actual path):
+Add this to your config file (replace `/absolute/path/to/ASO/` with your actual path):
 
 ```json
 {
   "mcpServers": {
-    "aida-mcp": {
+    "aso-mcp": {
       "command": "/bin/bash",
       "args": [
-        "/absolute/path/to/AIDA/start_mcp.sh"
+        "/absolute/path/to/ASO/start_mcp.sh"
       ]
     }
   }
 }
 ```
 
-⚠️ **Important:** Replace `/absolute/path/to/AIDA/` with your actual AIDA directory path.
+⚠️ **Important:** Replace `/absolute/path/to/ASO/` with your actual ASO directory path.
 
 **After MCP setup:**
 - Restart your AI client
@@ -296,8 +296,8 @@ Run through this checklist:
 | Platform running | http://localhost:31337 | Dashboard loads |
 | API healthy | http://localhost:8000/health | `{"status": "healthy"}` |
 | Database connected | Check backend logs | No connection errors |
-| Pentest container | `docker ps \| grep aida-pentest` or `docker ps \| grep exegol` | Container running |
-| MCP server | Check AI client | AIDA tools visible |
+| Pentest container | `docker ps \| grep aso-pentest` or `docker ps \| grep exegol` | Container running |
+| MCP server | Check AI client | ASO tools visible |
 
 
 ## Platform Scripts
@@ -349,28 +349,28 @@ TODO
 
 ```bash
 # List available assessments and pick one interactively
-python3 aida.py
+python3 aso.py
 
 # Load a specific assessment (auto-detect CLI)
-python3 aida.py -a "MyTarget"
+python3 aso.py -a "MyTarget"
 
 # Force Claude Code
-python3 aida.py -a "MyTarget" --cli claude
+python3 aso.py -a "MyTarget" --cli claude
 
 # Force Kimi CLI
-python3 aida.py -a "MyTarget" --cli kimi
+python3 aso.py -a "MyTarget" --cli kimi
 
 # Auto-approve all actions
-python3 aida.py -a "MyTarget" --yes
+python3 aso.py -a "MyTarget" --yes
 
 # Custom preprompt
-python3 aida.py -a "MyTarget" --preprompt /path/to/custom-preprompt.txt
+python3 aso.py -a "MyTarget" --preprompt /path/to/custom-preprompt.txt
 
 # External API (Claude only)
-python3 aida.py -a "MyTarget" --base-url "https://..." --api-key "..." --model claude-sonnet-4-5-20250929
+python3 aso.py -a "MyTarget" --base-url "https://..." --api-key "..." --model claude-sonnet-4-5-20250929
 
 # Pass an initial prompt
-python3 aida.py -a "MyTarget" "Start from phase 1 and run reconnaissance"
+python3 aso.py -a "MyTarget" "Start from phase 1 and run reconnaissance"
 ```
 
 ---
@@ -379,5 +379,5 @@ python3 aida.py -a "MyTarget" "Start from phase 1 and run reconnaissance"
 
 Need help? Contact **vasco0x4** on Discord.
 
-- **GitHub Issues**: [Report bugs](https://github.com/Vasco0x4/AIDA/issues)
+- **GitHub Issues**: [Report bugs](https://github.com/Vasco0x4/ASO/issues)
 - **Email**: Vasco0x4@proton.me

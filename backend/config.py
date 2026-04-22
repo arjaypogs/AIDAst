@@ -1,5 +1,5 @@
 """
-Configuration for AIDA - AI-Driven Security Assessment
+Configuration for ASO - Automated Security Operator
 """
 import os
 from typing import Optional
@@ -11,16 +11,16 @@ class Settings(BaseSettings):
     """Application settings"""
 
     # Application Metadata
-    PROJECT_NAME: str = "AIDA"
-    PROJECT_TAGLINE: str = "AI-Driven Security Assessment"
+    PROJECT_NAME: str = "ASO"
+    PROJECT_TAGLINE: str = "Automated Security Operator"
     PROJECT_DESCRIPTION: str = "Intelligent autonomous penetration testing powered by AI"
     VERSION: str = "1.0.0-alpha"
     API_V1_PREFIX: str = "/api"
 
     # Database Credentials
-    POSTGRES_USER: str = "aida"
-    POSTGRES_PASSWORD: str = "aida"
-    POSTGRES_DB: str = "aida_assessments"
+    POSTGRES_USER: str = "aso"
+    POSTGRES_PASSWORD: str = "aso"
+    POSTGRES_DB: str = "aso_assessments"
     POSTGRES_HOST: str = "localhost"
     POSTGRES_PORT: str = "5432"
 
@@ -34,10 +34,10 @@ class Settings(BaseSettings):
 
     # Container Configuration
     CONTAINER_WORKSPACE_BASE: str = "/workspace"
-    DEFAULT_CONTAINER_NAME: str = "aida-pentest"
+    DEFAULT_CONTAINER_NAME: str = "aso-pentest"
     # Comma-separated list of accepted container name prefixes.
-    # Both aida- (new) and exegol- (legacy) are accepted for backward compat.
-    CONTAINER_PREFIX_FILTER: str = "aida-,exegol-"
+    # Both aso- (new) and exegol- (legacy) are accepted for backward compat.
+    CONTAINER_PREFIX_FILTER: str = "aso-,exegol-"
     COMMAND_TIMEOUT: int = 300  # seconds (5 minutes default)
 
     # Logging
@@ -53,7 +53,7 @@ class Settings(BaseSettings):
     BACKEND_API_URL: str = "http://localhost:8000/api"
 
     # Authentication (JWT)
-    SECRET_KEY: str = "aida-secret-key-change-in-production-min-32-chars!"
+    SECRET_KEY: str = "aso-secret-key-change-in-production-min-32-chars!"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
 
     # Environment
@@ -68,11 +68,11 @@ class Settings(BaseSettings):
             return v
 
         # Get values from environment or defaults
-        user = os.getenv("POSTGRES_USER", "aida")
-        password = os.getenv("POSTGRES_PASSWORD", "aida")
+        user = os.getenv("POSTGRES_USER", "aso")
+        password = os.getenv("POSTGRES_PASSWORD", "aso")
         host = os.getenv("POSTGRES_HOST", "localhost")
         port = os.getenv("POSTGRES_PORT", "5432")
-        db = os.getenv("POSTGRES_DB", "aida_assessments")
+        db = os.getenv("POSTGRES_DB", "aso_assessments")
 
         return f"postgresql://{user}:{password}@{host}:{port}/{db}"
 

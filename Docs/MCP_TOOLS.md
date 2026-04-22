@@ -6,7 +6,7 @@ Complete reference for all MCP tools available to AI clients.
 
 ## Overview
 
-AIDA exposes tools through the Model Context Protocol (MCP). These tools give AI assistants the ability to:
+ASO exposes tools through the Model Context Protocol (MCP). These tools give AI assistants the ability to:
 
 - Execute commands in the pentesting container
 - Document findings and observations

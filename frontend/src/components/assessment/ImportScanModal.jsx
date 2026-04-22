@@ -688,7 +688,7 @@ const ImportScanModal = ({ assessmentId, onClose, onSuccess }) => {
                                 </div>
 
                                 <p className="text-center text-neutral-400 text-sm">
-                                    Data is now visible in the Recon tab and available for AIDA.
+                                    Data is now visible in the Recon tab and available for ASO.
                                 </p>
                             </div>
                         )}

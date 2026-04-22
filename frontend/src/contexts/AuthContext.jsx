@@ -72,7 +72,7 @@ export function AuthProvider({ children }) {
     setToken(result.token);
     setUser(result.user);
     setBackendUnreachable(false);
-    window.dispatchEvent(new CustomEvent('aida:auth-loaded'));
+    window.dispatchEvent(new CustomEvent('aso:auth-loaded'));
     return result;
   }, []);
 
@@ -82,7 +82,7 @@ export function AuthProvider({ children }) {
     setUser(result.user);
     setSetupRequired(false);
     setBackendUnreachable(false);
-    window.dispatchEvent(new CustomEvent('aida:auth-loaded'));
+    window.dispatchEvent(new CustomEvent('aso:auth-loaded'));
     return result;
   }, []);
 
@@ -99,8 +99,8 @@ export function AuthProvider({ children }) {
       setToken(null);
       setUser(null);
     };
-    window.addEventListener('aida:auth-cleared', onCleared);
-    return () => window.removeEventListener('aida:auth-cleared', onCleared);
+    window.addEventListener('aso:auth-cleared', onCleared);
+    return () => window.removeEventListener('aso:auth-cleared', onCleared);
   }, []);
 
   const refreshUser = useCallback((freshUser) => {

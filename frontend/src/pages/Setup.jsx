@@ -48,7 +48,7 @@ export default function Setup() {
         <div className="text-center mb-8">
           <ShieldCheck className="w-12 h-12 mx-auto mb-4 text-primary-600" />
           <h1 className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">
-            Welcome to AIDA
+            Welcome to ASO
           </h1>
           <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
             Create the first administrator account.

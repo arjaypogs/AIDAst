@@ -67,7 +67,7 @@ export const PendingCommandsProvider = ({ children }) => {
 
     // Update tab title with badge
     useEffect(() => {
-        const baseTitle = 'AIDA';
+        const baseTitle = 'ASO';
         if (pendingCount > 0) {
             document.title = `(${pendingCount}) ${baseTitle}`;
         } else {

@@ -1,4 +1,4 @@
-# AIDA User Guide
+# ASO User Guide
 
 Complete guide to running security assessments with AI-driven pentesting.
 
@@ -6,7 +6,7 @@ Complete guide to running security assessments with AI-driven pentesting.
 
 ## Overview
 
-AIDA follows a streamlined workflow:
+ASO follows a streamlined workflow:
 
 ```
 Create Assessment → Configure Workspace → Connect AI → Run Tests → Review Findings
@@ -81,7 +81,7 @@ Store discovered credentials or provide authentication tokens for testing:
 
 **Placeholder Usage:**
 
-When you add a credential, AIDA generates a placeholder like `{{ADMIN_API_TOKEN}}`. The AI can use this in commands:
+When you add a credential, ASO generates a placeholder like `{{ADMIN_API_TOKEN}}`. The AI can use this in commands:
 
 ```bash
 curl -H "Authorization: Bearer {{ADMIN_API_TOKEN}}" https://api.acme.com/admin
@@ -154,15 +154,15 @@ For infrastructure assessments, it's recommended to run long scans beforehand an
 
 ### Connect Your AI
 
-Launch AIDA with your preferred AI client:
+Launch ASO with your preferred AI client:
 
 ```bash
 # Auto-detect Claude Code or Kimi CLI
-python3 aida.py --assessment "Acme Corp Pentest"
+python3 aso.py --assessment "Acme Corp Pentest"
 
 # Or force a specific CLI
-python3 aida.py --assessment "Acme Corp Pentest" --cli claude
-python3 aida.py --assessment "Acme Corp Pentest" --cli kimi
+python3 aso.py --assessment "Acme Corp Pentest" --cli claude
+python3 aso.py --assessment "Acme Corp Pentest" --cli kimi
 ```
 
 The CLI injects the preprompt and loads the assessment context automatically. Then tell the AI:
@@ -236,7 +236,7 @@ Notes: Found in config.js, expires 2026-02-28
 
 ## Command Approval System
 
-For security and control, AIDA supports three command approval modes:
+For security and control, ASO supports three command approval modes:
 
 ![Command Approval Settings](../assets/doc/command-approval-modes.png)
 
@@ -272,7 +272,7 @@ When a command requires approval:
 
 ## Cards System
 
-Cards are the primary documentation mechanism in AIDA. There are three types:
+Cards are the primary documentation mechanism in ASO. There are three types:
 
 ### 1. Finding Cards (Vulnerabilities)
 
@@ -379,9 +379,9 @@ Folders help maintain organization across multiple concurrent assessments.
 
 ### Pentesting Container
 
-AIDA manages the pentesting container automatically:
-- **aida-pentest** (default): `docker exec -it aida-pentest bash`
-- **Exegol** (if selected): `docker exec -it exegol-aida /bin/zsh`
+ASO manages the pentesting container automatically:
+- **aso-pentest** (default): `docker exec -it aso-pentest bash`
+- **Exegol** (if selected): `docker exec -it exegol-aso /bin/zsh`
 
 Container name and workspace mount are configurable in **Settings → Container**.
 
@@ -408,9 +408,9 @@ Container name and workspace mount are configurable in **Settings → Container*
 
 | Document | Purpose |
 |----------|---------|
-| [**Installation Guide**](INSTALLATION.md) | Setup AIDA — Claude Code, Kimi, and other clients |
+| [**Installation Guide**](INSTALLATION.md) | Setup ASO — Claude Code, Kimi, and other clients |
 | [**MCP Tools Reference**](MCP_TOOLS.md) | Complete list of AI-available tools |
-| [**Architecture**](ARCHITECTURE.md) | Technical deep dive into AIDA |
+| [**Architecture**](ARCHITECTURE.md) | Technical deep dive into ASO |
 | [**PrePrompt**](PrePrompt.txt) | AI behavior guidelines |
 
 ---

@@ -1,6 +1,6 @@
 # Reset a Forgotten Password
 
-AIDA does **not** ship with an email-based password reset flow. Since the
+ASO does **not** ship with an email-based password reset flow. Since the
 platform is designed to run locally and the operator already has shell
 access to the host, password resets are handled through a single
 `docker compose exec` command. This is the same pattern used by GitLab
@@ -67,7 +67,7 @@ That's the signal you typed the wrong username.
 Useful when you can't remember the exact username spelling:
 
 ```bash
-docker compose exec postgres psql -U aida -d aida_assessments \
+docker compose exec postgres psql -U aso -d aso_assessments \
     -c "SELECT id, username, role, is_active, must_change_password FROM users;"
 ```
 
@@ -79,7 +79,7 @@ If your only admin is locked out and you don't want to use it, you can
 promote any other existing user to admin and use that account instead:
 
 ```bash
-docker compose exec postgres psql -U aida -d aida_assessments \
+docker compose exec postgres psql -U aso -d aso_assessments \
     -c "UPDATE users SET role='admin' WHERE username='alice';"
 ```
 
@@ -88,7 +88,7 @@ docker compose exec postgres psql -U aida -d aida_assessments \
 ## Re-activate a disabled account
 
 ```bash
-docker compose exec postgres psql -U aida -d aida_assessments \
+docker compose exec postgres psql -U aso -d aso_assessments \
     -c "UPDATE users SET is_active=true WHERE username='alice';"
 ```
 
@@ -96,7 +96,7 @@ docker compose exec postgres psql -U aida -d aida_assessments \
 
 ## Why not a reset link by email?
 
-- AIDA has no SMTP configuration and is designed to run on a single host.
+- ASO has no SMTP configuration and is designed to run on a single host.
 - The `email` field on a user account is **optional** — most users won't
   have one.
 - Implementing a token table, expiration, rate limiting and secure
@@ -106,6 +106,6 @@ docker compose exec postgres psql -U aida -d aida_assessments \
   they can run docker, they can already read the database. Resetting a
   password adds no new attack surface.
 
-If you ever expose AIDA behind a real domain (which is **not**
+If you ever expose ASO behind a real domain (which is **not**
 recommended), you should put it behind your own SSO / reverse-proxy
 authentication rather than building an email reset flow on top.

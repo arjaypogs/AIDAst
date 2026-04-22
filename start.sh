@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# AIDA - Startup Script
+# ASO - Startup Script
 # ==============================================================================
 # Single entry point for all modes:
 #   ./start.sh            Production (Nginx on localhost:31337)
@@ -58,7 +58,7 @@ done
 # MODE-SPECIFIC CONFIG
 # ==============================================================================
 
-AIDA_PORT=31337
+ASO_PORT=31337
 
 if [[ "$MODE" == "dev" ]]; then
     COMPOSE_FILES=""
@@ -67,13 +67,13 @@ if [[ "$MODE" == "dev" ]]; then
     MODE_LABEL="Development"
 else
     COMPOSE_FILES="-f docker-compose.yml -f docker-compose.prod.yml"
-    FRONTEND_PORT=$AIDA_PORT
-    FRONTEND_URL="http://localhost:${AIDA_PORT}"
+    FRONTEND_PORT=$ASO_PORT
+    FRONTEND_URL="http://localhost:${ASO_PORT}"
     MODE_LABEL="Production"
     export FRONTEND_BIND="$BIND"
 fi
 
-section "AIDA - ${MODE_LABEL} Mode"
+section "ASO - ${MODE_LABEL} Mode"
 
 # ==============================================================================
 # QUICK CHECKS
@@ -175,16 +175,16 @@ if [[ "$PORT_CONFLICT" == "true" ]]; then
 fi
 
 # ==============================================================================
-# CONTAINER MODE (aida-pentest or exegol)
+# CONTAINER MODE (aso-pentest or exegol)
 # ==============================================================================
 
-CONTAINER_PREFS_FILE="$SCRIPT_DIR/.aida/container-preference"
-mkdir -p "$SCRIPT_DIR/.aida"
-CONTAINER_MODE=$(cat "$CONTAINER_PREFS_FILE" 2>/dev/null || echo "aida-pentest")
+CONTAINER_PREFS_FILE="$SCRIPT_DIR/.aso/container-preference"
+mkdir -p "$SCRIPT_DIR/.aso"
+CONTAINER_MODE=$(cat "$CONTAINER_PREFS_FILE" 2>/dev/null || echo "aso-pentest")
 
-# Default to aida-pentest on first run (no interactive prompt)
+# Default to aso-pentest on first run (no interactive prompt)
 if [[ ! -f "$CONTAINER_PREFS_FILE" ]]; then
-    echo "aida-pentest" > "$CONTAINER_PREFS_FILE"
+    echo "aso-pentest" > "$CONTAINER_PREFS_FILE"
 fi
 
 # ==============================================================================
@@ -194,7 +194,7 @@ fi
 CONTAINERS_RUNNING=$($COMPOSE ps --status running -q 2>/dev/null | wc -l | tr -d ' ')
 
 if [[ "$CONTAINERS_RUNNING" -ge 3 ]]; then
-    log "AIDA is already running! (${MODE_LABEL})"
+    log "ASO is already running! (${MODE_LABEL})"
     echo ""
     $COMPOSE ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
     echo ""
@@ -283,8 +283,8 @@ if [[ "$BIND" == "0.0.0.0" ]]; then
     fi
 
     log "LAN IP: $HOST_IP"
-    export BACKEND_CORS_ORIGINS="http://${HOST_IP}:${AIDA_PORT},http://localhost:${AIDA_PORT},http://127.0.0.1:${AIDA_PORT}"
-    FRONTEND_URL="http://${HOST_IP}:${AIDA_PORT}"
+    export BACKEND_CORS_ORIGINS="http://${HOST_IP}:${ASO_PORT},http://localhost:${ASO_PORT},http://127.0.0.1:${ASO_PORT}"
+    FRONTEND_URL="http://${HOST_IP}:${ASO_PORT}"
 fi
 
 # ==============================================================================
@@ -294,16 +294,16 @@ fi
 section "Docker Containers"
 
 # Check for orphan containers from other projects with same names
-ORPHAN_POSTGRES=$(docker ps -a --format "{{.Names}}" | grep "^aida_postgres$" || true)
-ORPHAN_BACKEND=$(docker ps -a --format "{{.Names}}" | grep "^aida_backend$" || true)
-ORPHAN_FRONTEND=$(docker ps -a --format "{{.Names}}" | grep "^aida_frontend$" || true)
+ORPHAN_POSTGRES=$(docker ps -a --format "{{.Names}}" | grep "^aso_postgres$" || true)
+ORPHAN_BACKEND=$(docker ps -a --format "{{.Names}}" | grep "^aso_backend$" || true)
+ORPHAN_FRONTEND=$(docker ps -a --format "{{.Names}}" | grep "^aso_frontend$" || true)
 
 OUR_CONTAINERS=$($COMPOSE ps -a -q 2>/dev/null | wc -l | tr -d ' ')
 
 if [[ -n "$ORPHAN_POSTGRES" || -n "$ORPHAN_BACKEND" || -n "$ORPHAN_FRONTEND" ]] && [[ "$OUR_CONTAINERS" -eq 0 ]]; then
     warn "Found containers from another project with same names"
     log "Removing orphan containers..."
-    docker rm -f aida_postgres aida_backend aida_frontend 2>/dev/null || true
+    docker rm -f aso_postgres aso_backend aso_frontend 2>/dev/null || true
     log "Orphan containers removed"
 fi
 
@@ -312,7 +312,7 @@ fi
 #            fall back to local build if pull fails (Hub not set up yet)
 if [[ "$MODE" == "dev" ]]; then
     log "Building Docker images from source..."
-    if [[ "$CONTAINER_MODE" == "aida-pentest" ]]; then
+    if [[ "$CONTAINER_MODE" == "aso-pentest" ]]; then
         $COMPOSE build --quiet
     else
         $COMPOSE build --quiet backend frontend
@@ -323,7 +323,7 @@ else
         log "Images pulled from Docker Hub"
     else
         warn "Pull failed — building from source (first run may take a few minutes)..."
-        if [[ "$CONTAINER_MODE" == "aida-pentest" ]]; then
+        if [[ "$CONTAINER_MODE" == "aso-pentest" ]]; then
             $COMPOSE build --quiet
         else
             $COMPOSE build --quiet backend frontend
@@ -345,7 +345,7 @@ else
         # Dev mode — set ENVIRONMENT so backend uses --reload
         ENVIRONMENT=development $COMPOSE up -d --remove-orphans 2>&1 | grep -v "already exists but was created for project" || true
     else
-        if [[ "$CONTAINER_MODE" == "aida-pentest" ]]; then
+        if [[ "$CONTAINER_MODE" == "aso-pentest" ]]; then
             $COMPOSE up -d --remove-orphans 2>&1 | grep -v "already exists but was created for project" || true
         else
             $COMPOSE up -d --remove-orphans postgres backend frontend 2>&1 | grep -v "already exists but was created for project" || true
@@ -377,13 +377,13 @@ wait_for_service() {
     echo -e "${GREEN}Ready${NC}"
 }
 
-wait_for_service "PostgreSQL" "$COMPOSE exec -T postgres pg_isready -U aida" 30
+wait_for_service "PostgreSQL" "$COMPOSE exec -T postgres pg_isready -U aso" 30
 wait_for_service "Backend"    "curl -sf http://localhost:8000/health"         60
 
 if [[ "$MODE" == "dev" ]]; then
     wait_for_service "Frontend" "curl -sf http://localhost:5173" 120
 else
-    wait_for_service "Frontend" "curl -sf http://localhost:${AIDA_PORT}" 90
+    wait_for_service "Frontend" "curl -sf http://localhost:${ASO_PORT}" 90
 fi
 
 # ==============================================================================
@@ -406,12 +406,12 @@ if [[ "$CONTAINER_MODE" == "exegol" ]]; then
         log "Exegol container: $EXEGOL_RUNNING"
     fi
 else
-    PENTEST_RUNNING=$(docker ps --format "{{.Names}}" 2>/dev/null | grep "^aida-pentest$" || true)
+    PENTEST_RUNNING=$(docker ps --format "{{.Names}}" 2>/dev/null | grep "^aso-pentest$" || true)
     if [[ -z "$PENTEST_RUNNING" ]]; then
-        warn "aida-pentest not running — starting..."
-        $COMPOSE up -d aida-pentest 2>&1 | grep -v "already" || true
+        warn "aso-pentest not running — starting..."
+        $COMPOSE up -d aso-pentest 2>&1 | grep -v "already" || true
     else
-        log "Pentesting container: aida-pentest"
+        log "Pentesting container: aso-pentest"
     fi
 fi
 
@@ -419,7 +419,7 @@ fi
 # SUCCESS
 # ==============================================================================
 
-section "AIDA Ready"
+section "ASO Ready"
 
 echo ""
 log "Frontend : $FRONTEND_URL"
@@ -428,7 +428,7 @@ log "API Docs : http://localhost:8000/docs"
 
 if [[ "$BIND" == "0.0.0.0" && -n "$HOST_IP" ]]; then
     echo ""
-    echo -e "  ${BLUE}Share with your team →${NC}  http://${HOST_IP}:${AIDA_PORT}"
+    echo -e "  ${BLUE}Share with your team →${NC}  http://${HOST_IP}:${ASO_PORT}"
 fi
 
 echo ""

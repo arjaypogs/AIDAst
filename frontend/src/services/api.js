@@ -16,7 +16,7 @@ const apiClient = axios.create({
 // Request interceptor - attach JWT token
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('aida_token');
+    const token = localStorage.getItem('aso_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -39,10 +39,10 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401) {
       const url = error.config?.url || '';
       const isAuthEndpoint = url.includes('/auth/');
-      if (!isAuthEndpoint && localStorage.getItem('aida_token')) {
-        localStorage.removeItem('aida_token');
-        localStorage.removeItem('aida_user');
-        window.dispatchEvent(new CustomEvent('aida:auth-cleared'));
+      if (!isAuthEndpoint && localStorage.getItem('aso_token')) {
+        localStorage.removeItem('aso_token');
+        localStorage.removeItem('aso_user');
+        window.dispatchEvent(new CustomEvent('aso:auth-cleared'));
       }
     }
     const message = error.response?.data?.detail || error.message || 'An error occurred';

@@ -81,7 +81,7 @@ export default function SendReportModal({ assessmentId, assessmentName, onClose 
           <div className="flex items-center gap-3 px-3 py-2.5 bg-neutral-50 dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-700">
             <FileText className="w-8 h-8 text-red-500 shrink-0" />
             <div>
-              <p className="text-xs font-medium text-neutral-900 dark:text-neutral-100">AIDA_Report_{assessmentName.replace(/[^a-zA-Z0-9]/g, '_')}.pdf</p>
+              <p className="text-xs font-medium text-neutral-900 dark:text-neutral-100">ASO_Report_{assessmentName.replace(/[^a-zA-Z0-9]/g, '_')}.pdf</p>
               <p className="text-[10px] text-neutral-500 dark:text-neutral-400 mt-0.5">Full PDF report with findings, statistics, recon data, and methodology</p>
             </div>
           </div>

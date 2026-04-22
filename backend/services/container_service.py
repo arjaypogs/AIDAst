@@ -144,7 +144,7 @@ class ContainerService:
                             container_name = container_data.get("Names", "unknown").lstrip('/')
                             image = container_data.get("Image", "")
 
-                            # Accept containers matching any configured prefix (aida-, exegol-, ...)
+                            # Accept containers matching any configured prefix (aso-, exegol-, ...)
                             allowed_prefixes = tuple(
                                 p.strip() for p in settings.CONTAINER_PREFIX_FILTER.split(",") if p.strip()
                             )
@@ -320,7 +320,7 @@ class ContainerService:
         3. Auto-discover any running container matching CONTAINER_PREFIX_FILTER
 
         Falls back to auto-discovery when the configured container is not running,
-        which covers the Exegol mode where aida-pentest is not started.
+        which covers the Exegol mode where aso-pentest is not started.
         """
         stmt = select(PlatformSettings).filter(PlatformSettings.key == "container_name")
         result = await db.execute(stmt)

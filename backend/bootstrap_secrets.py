@@ -22,7 +22,7 @@ from pathlib import Path
 # The published default that lived in auth.py until the bootstrap was added.
 # Treated as "not set" so we replace it on first launch even on existing
 # installs that have it persisted by accident.
-LEGACY_DEFAULT = "aida-secret-key-change-in-production-min-32-chars!"
+LEGACY_DEFAULT = "aso-secret-key-change-in-production-min-32-chars!"
 
 ENV_PATH = Path(__file__).resolve().parent / ".env"
 

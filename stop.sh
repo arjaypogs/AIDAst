@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# AIDA - Stop Services
+# ASO - Stop Services
 # ==============================================================================
-# Stops all AIDA containers. Data is preserved.
+# Stops all ASO containers. Data is preserved.
 # ==============================================================================
 
 set -euo pipefail
@@ -31,7 +31,7 @@ else
     COMPOSE_CMD="docker compose"
 fi
 
-section "AIDA - Stopping Services"
+section "ASO - Stopping Services"
 
 # Stop host helper
 if pkill -f "tools/helper.py" 2>/dev/null; then
@@ -45,9 +45,9 @@ STOPPED=$($COMPOSE_CMD ps --status exited -q 2>/dev/null | wc -l | tr -d ' ')
 TOTAL=$((RUNNING + STOPPED))
 
 if [[ "$TOTAL" -eq 0 ]]; then
-    warn "No AIDA containers found"
+    warn "No ASO containers found"
     echo ""
-    echo "To start AIDA: ./start.sh"
+    echo "To start ASO: ./start.sh"
     exit 0
 fi
 
