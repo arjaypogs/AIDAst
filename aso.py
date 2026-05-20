@@ -4,6 +4,7 @@ ASO CLI Launcher - Professional Python Implementation
 Automated Security Operator - Intelligent wrapper for Claude Code, Kimi CLI & Qwen Code
 """
 import os
+import re
 import sys
 import json
 import subprocess
@@ -235,6 +236,24 @@ def generate_mcp_config(db_url: str, token: str = "", quiet=False) -> None:
         console.print(f"[dim]  Python: {python_bin_str}[/dim]")
 
 
+def generate_mcp_http_config(url: str, api_key: str, quiet=False) -> None:
+    """Generate an HTTP Streamable-HTTP MCP config for remote servers."""
+    ASO_CONFIG_DIR.mkdir(exist_ok=True)
+    config = {
+        "mcpServers": {
+            "aso-mcp": {
+                "url": url,
+                "headers": {"Authorization": f"Bearer {api_key}"},
+            }
+        }
+    }
+    MCP_CONFIG_FILE.write_text(json.dumps(config, indent=2))
+    MCP_CONFIG_FILE.chmod(0o600)
+    if not quiet:
+        console.print(f"[dim]✓ MCP config (HTTP): {MCP_CONFIG_FILE.name}[/dim]")
+        console.print(f"[dim]  Endpoint: {url}[/dim]")
+
+
 def generate_kimi_agent_file(preprompt_content: str, assessment_name: Optional[str], 
                              assessment_id: Optional[str], container_name: Optional[str],
                              quiet=False) -> Path:
@@ -415,6 +434,55 @@ def authenticate(backend_url: str) -> str:
     return session_token
 
 
+# --- Host path translation (WSL / Docker Desktop on Windows) ---
+
+_WIN_PATH_RE = re.compile(r"^([A-Za-z]):[\\/]")
+
+
+def _is_wsl() -> bool:
+    """Return True if running inside WSL (Windows Subsystem for Linux)."""
+    if os.getenv("WSL_DISTRO_NAME") or os.getenv("WSL_INTEROP"):
+        return True
+    try:
+        with open("/proc/version", "r") as f:
+            return "microsoft" in f.read().lower()
+    except OSError:
+        return False
+
+
+def translate_host_path(path: str) -> str:
+    """Translate a Docker-reported host path so it is usable from this process.
+
+    Docker Desktop on Windows reports bind-mount Sources as Windows paths
+    (e.g. ``C:/Users/foo/.exegol/workspaces/default/X``). When the ASO
+    launcher runs inside WSL, those paths must be rewritten to their WSL
+    equivalent (``/mnt/c/Users/foo/...``) before ``os.chdir`` or any
+    filesystem operation can succeed.
+
+    Returns the path unchanged if no translation is needed.
+    """
+    if not path or not _WIN_PATH_RE.match(path):
+        return path
+    if not _is_wsl():
+        return path  # native Windows Python — caller handles Windows paths natively
+
+    # Prefer wslpath: respects custom mount roots from /etc/wsl.conf.
+    try:
+        result = subprocess.run(
+            ["wslpath", "-u", path],
+            capture_output=True, text=True, timeout=5,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return result.stdout.strip()
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        pass
+
+    # Fallback: manual C:/foo/bar  ->  /mnt/c/foo/bar
+    drive = path[0].lower()
+    rest = path[2:].lstrip("/\\").replace("\\", "/")
+    return f"/mnt/{drive}/{rest}" if rest else f"/mnt/{drive}"
+
+
 def resolve_workspace(assessment_name: str, backend_url: str, token: str = "") -> Optional[dict]:
     """Resolve assessment workspace via API, with retry on transient network errors"""
     import time
@@ -504,13 +572,17 @@ def show_cli_not_found():
 @click.option("--base-url", help="Custom API base URL (Claude Code only)")
 @click.option("--api-key", help="API authentication token (Claude Code only)")
 @click.option("--no-mcp", is_flag=True, help="Disable MCP server")
+@click.option("--http", "http_url", default=None,
+              help="Use the HTTP MCP transport at the given URL (e.g. http://localhost:8000/mcp) instead of stdio")
+@click.option("--mcp-api-key", default=None,
+              help="Bearer API key for the HTTP MCP transport (env: ASO_MCP_API_KEY)")
 @click.option("--debug", is_flag=True, help="Enable debug mode")
 @click.option("-q", "--quiet", is_flag=True, help="Quiet mode (minimal output)")
 @click.option("--cli", "cli_choice", type=click.Choice(["claude", "kimi", "qwen", "auto"]), default="auto",
               help="Which CLI to use (default: auto-detect)")
 @click.option("-y", "--yes", is_flag=True, help="Auto-approve all actions (Kimi/Qwen: --yolo, Claude: permission-mode=accept)")
 @click.argument("prompt", nargs=-1)
-def main(assessment, model, permission_mode, preprompt, base_url, api_key, no_mcp, debug, quiet, cli_choice, yes, prompt):
+def main(assessment, model, permission_mode, preprompt, base_url, api_key, no_mcp, http_url, mcp_api_key, debug, quiet, cli_choice, yes, prompt):
     """ASO CLI Launcher - Automated Security Operator
 
     Supports Claude Code, Kimi CLI, and Qwen Code CLI as underlying AI agents.
@@ -666,10 +738,22 @@ def main(assessment, model, permission_mode, preprompt, base_url, api_key, no_mc
     
     # MCP Configuration
     if not no_mcp:
-        if not MCP_SERVER_PATH.exists():
-            console.print(f"[red]✗ MCP server not found: {MCP_SERVER_PATH}[/red]\n")
-            sys.exit(1)
-        generate_mcp_config(db_url, token, quiet)
+        if http_url or os.getenv("ASO_MCP_HTTP_URL"):
+            # HTTP transport — don't spawn a subprocess, point the client at the URL.
+            url = http_url or os.getenv("ASO_MCP_HTTP_URL")
+            key = mcp_api_key or os.getenv("ASO_MCP_API_KEY", "")
+            if not key:
+                console.print(
+                    "[red]✗ HTTP MCP requires a Bearer key. "
+                    "Pass --mcp-api-key or set ASO_MCP_API_KEY.[/red]\n"
+                )
+                sys.exit(1)
+            generate_mcp_http_config(url, key, quiet)
+        else:
+            if not MCP_SERVER_PATH.exists():
+                console.print(f"[red]✗ MCP server not found: {MCP_SERVER_PATH}[/red]\n")
+                sys.exit(1)
+            generate_mcp_config(db_url, token, quiet)
     
     # Workspace resolution
     workspace_path = str(ASO_ROOT)
@@ -686,10 +770,17 @@ def main(assessment, model, permission_mode, preprompt, base_url, api_key, no_mc
             show_assessment_not_found(assessment, backend_url)
         
         # Extract workspace info
-        workspace_path = result["host_path"]
+        raw_host_path = result["host_path"]
+        workspace_path = translate_host_path(raw_host_path)
         assessment_id = result["assessment_id"]
         container_name = result["container_name"]
-        
+
+        if workspace_path != raw_host_path and not quiet:
+            console.print(
+                f"[dim]↪ Translated host path for local env:[/dim] "
+                f"[yellow]{raw_host_path}[/yellow] → [green]{workspace_path}[/green]"
+            )
+
         if not quiet and debug:
             console.print(f"[dim]✓ Container: {container_name}[/dim]")
             console.print(f"[dim]✓ Workspace: {workspace_path}[/dim]\n")
@@ -736,8 +827,8 @@ The assessment workspace is ready. Use your standard tools to work with files an
 
         if base_url:
             env["ANTHROPIC_BASE_URL"] = base_url
-            # Disable prompt caching for external API proxies (Vertex AI, etc.)
-            env["DISABLE_PROMPT_CACHING"] = "1"
+            # For disable prompt caching for external API change 0 to 1
+            env["DISABLE_PROMPT_CACHING"] = "0"
         if api_key:
             env["ANTHROPIC_AUTH_TOKEN"] = api_key
 
@@ -951,6 +1042,30 @@ The assessment workspace is ready. Use your standard tools to work with files an
         else:  # qwen
             os.chdir(workspace_path)
             os.execvpe("qwen", cli_args, env)
+    except FileNotFoundError as e:
+        console.print(f"[red]Failed to launch {cli_name}: {e}[/red]")
+        # Most common cause: backend returned a host path that doesn't exist
+        # on this machine (e.g. Docker Desktop on Windows reported a Windows
+        # path while we're running in WSL, or the assessment dir was deleted).
+        if workspace_path and not Path(workspace_path).exists():
+            console.print(
+                f"\n[yellow]The workspace directory does not exist on this host:[/yellow] "
+                f"{workspace_path}"
+            )
+            if _WIN_PATH_RE.match(workspace_path):
+                console.print(
+                    "[yellow]This looks like a Windows path. If you are running "
+                    "ASO from WSL, ensure `wslpath` is available "
+                    "(it ships with WSL by default) and that the C: drive is "
+                    "mounted under /mnt/c.[/yellow]"
+                )
+            elif _is_wsl():
+                console.print(
+                    "[yellow]Verify the Exegol container's workspace mount with:[/yellow]\n"
+                    f"  [cyan]docker inspect {container_name} --format "
+                    "'{{json .Mounts}}'[/cyan]"
+                )
+        sys.exit(1)
     except Exception as e:
         console.print(f"[red]Failed to launch {cli_name}: {e}[/red]")
         sys.exit(1)

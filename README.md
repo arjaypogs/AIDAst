@@ -1,313 +1,237 @@
 <p align="center">
   <img src="./assets/banner1.png" alt="ASO Banner" width="100%">
 </p>
+
 <h1 align="center">Automated Security Operator</h1>
+<h3 align="center">Automated Security Operator</h3>
 
 <p align="center">
-  <strong>Give your AI the power of 400+ pentesting tools. Let it hack (legally).</strong>
+  An agent that runs full security assessments end-to-end.<br>
+  You define the scope. You review the findings.
 </p>
 
 <p align="center">
   <a href="#quick-start">Quick Start</a> •
-  <a href="#why-aso-exists">Why ASO</a> •
+  <a href="#what-it-does">What It Does</a> •
   <a href="Docs/INSTALLATION.md">Installation</a> •
   <a href="Docs/USER_GUIDE.md">User Guide</a> •
-  <a href="Docs/ARCHITECTURE.md">Architecture</a>
+  <a href="Docs/MCP_TOOLS.md">Agent Tools</a> •
+  <a href="https://discord.gg/RVJTWtkVA2">Discord</a>
 </p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/License-AGPL_v3-blue" alt="License">
-  <img src="https://img.shields.io/badge/MCP-Compatible-green" alt="MCP">
-  <img src="https://img.shields.io/badge/Container-aso--pentest-orange" alt="aso-pentest">
-  <img src="https://img.shields.io/badge/Version-1.0.0--alpha-purple" alt="Version">
+  <img src="https://img.shields.io/badge/Agent-Autonomous-red" alt="Autonomous">
+  <img src="https://img.shields.io/badge/Models-Claude%20%7C%20Gemini%20%7C%20GPT%20%7C%20Any-green" alt="Models">
+  <img src="https://img.shields.io/badge/Version-1.1.0-purple" alt="Version">
+  <a href="https://github.com/Vasco0x4/ASO/stargazers"><img src="https://img.shields.io/github/stars/Vasco0x4/ASO?style=flat&label=Stars&color=gold" alt="GitHub Stars"></a>
+  <a href="https://discord.gg/RVJTWtkVA2"><img src="https://img.shields.io/badge/Discord-Join%20Community-5865F2?logo=discord&logoColor=white" alt="Discord"></a>
 </p>
 
 ---
 
-## What is ASO?
+ASO turns any LLM into an autonomous pentester capable of assessing web
+applications, APIs, and infrastructure. The agent reasons, understands
+application logic, executes commands in an isolated container,
+and documents every finding with the commands used.
 
-**ASO** connects AI assistants to a real pentesting environment. Instead of just *talking* about security testing, your AI can actually *do* it.
-
-Here's the deal:
--  **Your choice of pentesting container** — use the built-in `aso-pentest` (~2 GB, starts automatically, covers all the essential tools) or bring your own [Exegol](https://github.com/ThePorgs/Exegol) container (400+ tools, ~20-40 GB). You pick at first launch — and can switch anytime.
--  **MCP integration** that works with *any* AI client (Claude, Gemini, GPT, Antigravity...)
--  **Web dashboard** to track findings, commands, and progress
--  **Structured workflow** from recon to exploitation
-
-Think of it as giving your AI a fully-equipped hacking lab and a notebook to document everything.
+---
 
 <p align="center">
-  <img src="./assets/view.png" alt="ASO Dashboard" width="800">
+  <img src="./assets/view4.png" alt="ASO Dashboard" width="800">
 </p>
 
 ---
 
+## Real Results
 
+Claude + ASO isn't just talk. It produces results that end up in CVE databases.
 
-## Why ASO Exists
+| ID | Severity | Project | Description |
+|----|----------|---------|-------------|
+| [CVE-2026-32034](https://nvd.nist.gov/vuln/detail/CVE-2026-32034) | ![MEDIUM](https://img.shields.io/badge/CVSS-5.6%20MEDIUM-yellow) | [openclaw/openclaw](https://github.com/openclaw/openclaw) | Insecure HTTP permits hijacking |
+| [GHSA-xfvv-ggvq-pchh](https://github.com/appsmithorg/appsmith/security/advisories/GHSA-xfvv-ggvq-pchh) | ![HIGH](https://img.shields.io/badge/CVSS-8.9%20HIGH-orange) | [appsmithorg/appsmith](https://github.com/appsmithorg/appsmith) | RCE via newline injection in env variable endpoint |
+| [GHSA-vvxf-f8q9-86gh](https://github.com/appsmithorg/appsmith/security/advisories/GHSA-vvxf-f8q9-86gh) | ![MEDIUM](https://img.shields.io/badge/CVSS-5.1%20MEDIUM-yellow) | [appsmithorg/appsmith](https://github.com/appsmithorg/appsmith) | SSRF via SMTP test endpoint — internal port scanning |
 
-Modern AI assistants know pentesting tools, techniques, and vulnerability classes—**but they can't execute them.**
-
-Without execution capabilities, security testing becomes a tedious back-and-forth: you ask the AI for a command, copy it to your terminal, wait for results, paste the output back, and repeat. Traditional scanners like Burp Suite run fixed patterns and can't adapt to specific tech stacks or chain multi-step exploits.
-
-**ASO changes this** by connecting AI directly to a professional pentesting environment:
-
-- 🔧 **Direct Execution** - Built-in pentesting environment (nmap, sqlmap, ffuf, nuclei...)
-- 🧠 **Persistent Memory** - Full context maintained across sessions in structured database
-- 📝 **Auto Documentation** - Findings tracked as cards with severity, proof, and technical analysis
-- ⛓️ **Attack Chains** - AI connects dots between discoveries to build multi-step exploits
-- 🎯 **Adaptive Testing** - Methodology adjusts based on findings, not fixed patterns
-
-**Result:** Your AI becomes an autonomous security researcher, not just a consultant.
+*More under responsible disclosure — awaiting publication.*
 
 ---
 
-##  Video Demo
+## What It Does
 
-<p align="">
-  <a href="https://www.youtube.com/watch?v=yz6ac-y4g08">
-    <img src="https://img.youtube.com/vi/yz6ac-y4g08/maxresdefault.jpg" alt="ASO Demo Video" width="70%">
-  </a>
-</p>
+ASO was built to give your AI everything a pentester needs to work.
 
----
+**A fully equipped execution environment.**
+A Docker container loaded with Linux pentesting tools — nmap, sqlmap, ffuf,
+nuclei, and anything else it needs. If a tool is missing, the agent installs it.
 
-## System Requirements
+**Custom exploitation via Python.**
+The agent generates and executes Python scripts on the fly — custom payloads,
+encoding tricks, protocol quirks, or any logic that off-the-shelf tools can't handle.
 
-### Supported Platforms
-- **macOS** (Intel & Apple Silicon)
-- **Linux** (Ubuntu, Debian, RHEL, Fedora, Arch, and derivatives)
-- **Windows** (Untested)
+**Burp-level HTTP control.**
+The agent sends and manipulates HTTP requests directly — headers, cookies, body,
+auth tokens. Stored credentials are auto-injected via placeholders. Same power
+as Burp Repeater, without the UI overhead.
+
+**A persistent notebook.**
+The agent logs what it knows about the application, maps attack paths, records
+observations, flags interesting behaviors, and documents every confirmed
+vulnerability — commands used, raw output, full context. Stop an engagement
+and resume it days later for retest, deeper analysis, or handoff.
+
+### Where is the real pentester?
+
+You review. The AI hands you findings with full context notes, commands,
+reproduction steps, and the reasoning that led there. You reproduce, triage,
+prioritize, and report.
+
+Your expertise stays where it matters. The grunt work runs on its own.
+
 
 ---
 
 ## Quick Start
 
-### Prerequisites
-
-- **Docker Desktop** - To run the platform
-- **An AI Client** - Claude Desktop, Claude Code, Gemini CLI, Antigravity... pick your favorite
+**Prerequisites:** Docker Desktop + any AI client (Claude, Gemini, GPT...)
 
 ```bash
-# Clone & start
 git clone https://github.com/Vasco0x4/ASO.git
 cd ASO
 ./start.sh
-
-# Open the dashboard
-open http://localhost:31337
 ```
 
-> **Contributors:** use `./start.sh --dev` for Vite hot reload on `localhost:5173`.
-> **LAN access:** use `./start.sh --lan` to share with your team.
+Dashboard: `http://localhost:31337`
 
-### Connect Your AI
+> `./start.sh --dev` — hot reload for contributors
+> `./start.sh --lan` — share across your local network (HTTPS, self-signed)
+> `./start.sh --domain x.com` — public deploy with Let's Encrypt
 
-Now hook up your AI client.
-
-**Recommended: ASO CLI (Claude Code or Kimi)**
-
-The easiest way to get started is using the ASO CLI wrapper, which supports both Claude Code and Kimi CLI:
+### Launch the Agent
 
 ```bash
-# Auto-detect available CLI (Claude or Kimi)
-python3 aso.py --assessment "test"
+# Auto-detects Claude or Kimi CLI
+python3 aso.py --assessment "target-corp"
 
-# Force a specific CLI
-python3 aso.py --assessment "test" --cli claude
-python3 aso.py --assessment "test" --cli kimi
+# Force a specific model
+python3 aso.py --assessment "target-corp" --cli claude
 
-# Auto-approve all actions
-python3 aso.py --assessment "test" --yes
+# No confirmation prompts
+python3 aso.py --assessment "target-corp" --yes
 ```
 
-You can also use your own API keys (Claude only).
+### Define Your Scope
 
-**Alternative: Import MCP tools into your AI client**
-
-Here's Claude Desktop as an example:
-
-**Default config path (macOS):**
 ```
-~/Library/Application Support/Claude/claude_desktop_config.json
-```
-**MCP config:**
-
-```json
-{
-  "mcpServers": {
-    "aso-mcp": {
-      "command": "/bin/bash",
-      "args": [
-        "/absolute/path/to/ASO/start_mcp.sh"
-      ]
-    }
-  }
-}
+Load assessment 'target-corp' and start the pentest on https://example.com
+Scope: all subdomains, authentication flows, API endpoints
+Exclude: brute-force on /login
 ```
 
-> **Full setup for all AI clients** → [INSTALLATION.md](Docs/INSTALLATION.md)
-
-### First Assessment
-
-1. Create an assessment in the web UI
-2. Start your AI client
-3. Inject the pre prompt. 
-4. Tell it: *"Load assessment 'Acme' and start it"*
-5. Watch it go
+> Full setup for all AI clients → [INSTALLATION.md](Docs/INSTALLATION.md)
 
 ---
 
-## Works With Any AI
+## Supported Models
 
-ASO uses the **Model Context Protocol (MCP)** - an open standard. If your AI client supports MCP, it works with ASO.
+ASO is model-agnostic. Any LLM with tool-calling support works.
 
-| AI Client           | Status      | Setup |
-|---------------------|-------------|-------|
-| **Claude Code**     | Recommended | Via `aso.py` (automatic) |
-| **Kimi CLI**        | Recommended | Via `aso.py` (automatic) |
-| **External API**    | Recommended | Via `aso.py --base-url` |
-| **Claude Desktop**  | Works       | Manual MCP import |
-| **ChatGPT Desktop** | Works       | Manual MCP import |
-| **Gemini CLI**      | Works       | Manual MCP import |
-| **Antigravity**     | Works       | Manual MCP import |
+| Client | Setup |
+|--------|-------|
+| **Claude Code** | `python3 aso.py` (automatic) |
+| **Kimi CLI** | `python3 aso.py` (automatic) |
+| **External API** (OpenAI-compatible) | `python3 aso.py --base-url` |
+| **Claude Desktop** | MCP config |
+| **ChatGPT Desktop** | MCP config |
+| **Gemini CLI** | MCP config |
 
-> **Full setup for all AI clients** → [INSTALLATION.md](Docs/INSTALLATION.md)
-
+The smarter the model, the deeper the engagement. Swap models without changing anything else.
 
 ---
 
-## MCP Tools
+## Agent Tools
 
-The AI gets access to specialized tools:
+| Tool | |
+|------|-|
+| `execute()` | Run any command in the pentesting container |
+| `scan()` | nmap, gobuster, ffuf, nikto, dirb |
+| `subdomain_enum()` | Subdomain discovery |
+| `ssl_analysis()` | TLS/SSL audit |
+| `tech_detection()` | Technology fingerprinting |
+| `python_exec()` | Execute Python in the container |
+| `http_request()` | HTTP client with credential auto-substitution |
+| `add_card()` | Log a finding — CVSS 4.0 auto-scored |
+| `credentials_add()` | Store credentials, auto-injected via `{{PLACEHOLDER}}` |
 
-```
-ASSESSMENT
-   load_assessment    - Load and start working
-   update_phase       - Document progress
+Built-in `aso-pentest` container (~2 GB, starts automatically). Plug in [Exegol](https://github.com/ThePorgs/Exegol) for 400+ tools — switchable anytime from the dashboard.
 
-CARDS
-   add_card          - Create findings/observations/info
-   list_cards        - View all cards
-   update_card       - Modify cards
-   delete_card       - Remove cards
-
-RECON
-   add_recon_data    - Track discovered assets
-   list_recon        - View recon data
-
-EXECUTION
-   execute           - Run any command in the pentesting container
-   scan              - Quick scans (nmap, gobuster, ffuf...)
-   subdomain_enum    - Find subdomains
-   ssl_analysis      - Check SSL/TLS
-   tech_detection    - Identify tech stack
-   tool_help         - Get tool documentation
-
-CREDENTIALS
-   credentials_add   - Store credentials
-   credentials_list  - List stored creds
-```
-
-> **Full tool documentation** → [MCP_TOOLS.md](Docs/MCP_TOOLS.md)
+> Full reference → [MCP_TOOLS.md](Docs/MCP_TOOLS.md)
 
 ---
 
-## Project Structure
+## What's New in v1.1.0
 
-```
-ASO/
-├── backend/              # FastAPI + MCP Server
-│   ├── api/             # REST endpoints
-│   ├── mcp/             # MCP server + tools
-│   ├── models/          # Database models
-│   └── services/        # Business logic
-├── frontend/            # React dashboard
-│   ├── src/pages/       # Dashboard, Assessments, Settings...
-│   └── src/components/  # Reusable UI components
-├── pentest/             # Built-in pentesting container (aso-pentest)
-│   └── Dockerfile       # Ubuntu 22.04 + nmap, ffuf, gobuster, sqlmap...
-├── Docs/                # Documentation and AI methodology
-├── aso.py              # CLI launcher
-├── start.sh             # Start the platform (prod default, --dev, --lan)
-├── stop.sh              # Stop all services (data preserved)
-├── restart.sh           # Restart all services
-├── docker-compose.yml   # Dev infrastructure
-├── docker-compose.prod.yml  # Prod overrides (Nginx reverse proxy)
-└── docker-compose.hub.yml   # Standalone — pre-built Docker Hub images
-```
+- **Authentication** — JWT, admin/user roles, first-run setup wizard
+- **PDF reports** — one-click export per assessment
+- **CVSS 4.0** — automatic scoring on every finding
+- **Attack timeline** — auto-generated per engagement
+- **Notifications** — Telegram, Slack, Email with optional PDF attachment
+- **Assessment templates** — start from predefined methodologies
+- **`aso-pentest` container** — lightweight built-in environment, no Exegol required
+- **`python_exec` + `http_request`** — advanced execution tools
+- **Cross-assessment findings view** — aggregate and filter findings across all engagements
+- **Security hardening** — Docker socket proxy, path traversal prevention, localhost-only DB
+
+> !! Run locally or on your LAN. Do not expose the dashboard to the public. !!
 
 ---
 
 ## Documentation
 
-| Document | Description |
-|----------|-------------|
-| [**INSTALLATION.md**](Docs/INSTALLATION.md) | Complete setup guide - all AI clients |
-| [**USER_GUIDE.md**](Docs/USER_GUIDE.md) | How to use the platform |
-| [**ARCHITECTURE.md**](Docs/ARCHITECTURE.md) | Technical deep dive + diagrams |
-| [**MCP_TOOLS.md**](Docs/MCP_TOOLS.md) | All MCP tools explained |
-
-
----
-
-## Alpha Release - Known Limitations
-
-**ASO is currently in alpha.** This means:
-
-- **Local / LAN use only** - Do NOT expose the web interface to the public internet without additional security hardening
-- **Bugs and rough edges exist** - Some error messages use browser alerts, WebSocket reconnections may require manual refresh
-- **Database credentials** - Change defaults in `.env` before any deployment
-
-**This is a working prototype for early adopters and security professionals who understand the risks.**
-
-Improvements coming in future releases:
-- Refined UI/UX (replacing alerts with modals)
-- Enhanced error handling
-
-**For now: Run locally or on your LAN, don't expose to internet, use at your own risk.**
-
-Report bugs and request features: [GitHub Issues](https://github.com/Vasco0x4/ASO/issues)
+| | |
+|--|--|
+| [INSTALLATION.md](Docs/INSTALLATION.md) | Full setup — all AI clients |
+| [USER_GUIDE.md](Docs/USER_GUIDE.md) | Platform usage guide |
+| [MCP_TOOLS.md](Docs/MCP_TOOLS.md) | Agent tool reference |
+| [ARCHITECTURE.md](Docs/ARCHITECTURE.md) | Technical deep dive |
 
 ---
 
 ## Contributing
 
-ASO is actively developed. Want to contribute?
+ASO is actively developed.
 
-**Planned Features:**
-
-- Frontend redesign with flat, professional UI
+**Planned:**
 - OWASP testing guidelines integration
-- Enhanced phase workflow system
-- Advanced CLI wrapper capabilities
+- Multi-agent mode — specialized sub-agents per phase
+- Active Directory / internal network module
+- Enhanced CLI capabilities
 
----
-
-Need help? Contact **vasco0x4** on Discord.
+Issues and PRs welcome → [GitHub Issues](https://github.com/Vasco0x4/ASO/issues)
 
 ---
 
 ## License
 
-**AGPL v3** - Free and open source.
-
-You can use, modify, and distribute ASO freely. If you modify and deploy it (including as a network service), you must open source your changes under AGPL v3.
-
-**Commercial licensing available** for organizations that need proprietary modifications.
-Contact: **Vasco0x4@proton.me**
+**AGPL v3** — free and open source.
 
 ---
 
 ## Credits
 
-- [**Anthropic MCP**](https://modelcontextprotocol.io/) - The protocol that makes this possible
-- The security community for all the amazing open-source tools
-- [**Exegol**](https://github.com/ThePorgs/Exegol) - Supported as an alternative container for advanced users
+- [Anthropic MCP](https://modelcontextprotocol.io/) — the tool-calling protocol powering agent actions
+- [Exegol](https://github.com/ThePorgs/Exegol) — supported as alternative container
+- The security community for the open-source tooling
 
 ---
+
+<p align="center">
+  Questions or feedback? Join the community on <a href="https://discord.gg/RVJTWtkVA2"><strong>Discord</strong></a>
+</p>
+
 <p align="center">
   <a href="https://github.com/Vasco0x4/ASO">⭐ Star on GitHub</a> •
+  <a href="https://discord.gg/RVJTWtkVA2">💬 Discord</a> •
   <a href="https://github.com/Vasco0x4/ASO/issues">Report Bug</a> •
   <a href="mailto:Vasco0x4@proton.me">Contact</a>
 </p>
