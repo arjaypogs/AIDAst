@@ -15,6 +15,7 @@ import SendReportModal from '../components/assessment/SendReportModal';
 
 import ChangeContainerModal from '../components/workspace/ChangeContainerModal';
 import MethodologyReport from '../components/assessment/MethodologyReport';
+import WebShell from '../components/assessment/WebShell';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { getSeverityBarClass, SEVERITY_ORDER } from '../utils/severity';
 
@@ -937,6 +938,11 @@ const AssessmentDetail = () => {
 
       {/* Methodology Report */}
       <MethodologyReport assessmentId={parseInt(id)} />
+
+      {/* Web Shell */}
+      <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg overflow-hidden">
+        <WebShell assessmentId={parseInt(id)} assessmentName={assessment?.name} />
+      </div>
 
       {/* Command History - Version compacte et navigable */}
       <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg">
